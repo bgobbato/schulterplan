@@ -1,9 +1,6 @@
 {
   "name": "SchulterPlan",
   "version": 2,
-  "buildCommand": "echo 'Static site, no build needed'",
-  "devCommand": "npx http-server -p 3000 -c-1",
-  "env": {},
   "public": true,
   "rewrites": [
     {
