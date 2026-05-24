@@ -1,0 +1,129 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║             SCHULTERPLAN — VERCEL DEPLOYMENT SETUP GUIDE                   ║
+║                                                                            ║
+║  Esta pasta contém TODOS os arquivos necessários para fazer deploy        ║
+║  da aplicação SchulterPlan no Vercel (plataforma de hospedagem)          ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📁 ARQUIVOS INCLUSOS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ index.html                 → Página principal (planner 3D)
+✅ surgery-dashboard.html     → Dashboard para cirurgia em tempo real
+✅ data/                      → Modelos 3D + planning.json
+   ├── scapula.obj           → Escápula do paciente
+   ├── glenoid_anat_*.stl    → Implantes Agilon (5 variantes)
+   ├── glenoid_round_3.stl   → Agilon Round 3
+   ├── techimport.stl        → Implante TechImport
+   ├── glenoid_anat_2_back.stl → Modelo de contato ósseo
+   ├── baseplate_*.obj       → Baseplate options
+   └── planning.json         → Case de exemplo (MiriaOE-GPS)
+
+✅ vercel.json               → Configuração do Vercel
+✅ package.json              → Metadados do projeto
+✅ README.md                 → Documentação técnica
+✅ DEPLOYMENT.md             → Guia detalhado de deployment
+✅ .gitignore                → Arquivos a ignorar no Git
+
+TAMANHO TOTAL: ~23 MB (modelos 3D comprimidos)
+
+
+🚀 COMO FAZER O DEPLOY (3 PASSOS):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 1: Criar repositório no GitHub
+───────────────────────────────────
+$ git init
+$ git add .
+$ git commit -m "Initial: SchulterPlan"
+$ git remote add origin https://github.com/SEU_USUARIO/schulterplan.git
+$ git push -u origin main
+
+   👉 Substitua "SEU_USUARIO" pelo seu username no GitHub
+
+
+PASSO 2: Conectar ao Vercel
+───────────────────────────
+1. Vá para https://vercel.com/dashboard
+2. Clique "Add New..." → "Project"
+3. Selecione o repositório "schulterplan"
+4. Clique "Import"
+5. Deixe as configurações padrão (Vercel auto-detecta)
+6. Clique "Deploy"
+
+   ⏱️  Deploy leva ~1–2 minutos
+
+
+PASSO 3: Verificar Deployment
+──────────────────────────────
+Vercel fornecerá uma URL como: https://schulterplan.vercel.app
+
+Testes:
+  ✓ https://schulterplan.vercel.app/
+    → Deve abrir a página principal com viewer 3D
+
+  ✓ https://schulterplan.vercel.app/surgery-dashboard.html
+    → Deve abrir o dashboard em landscape (para TV/monitor)
+
+  ✓ Modelos 3D devem estar visíveis (não cinzas/vazios)
+  ✓ Botões "Measure" e "Auto Measure" devem funcionar
+
+
+📋 PRÉ-REQUISITOS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Conta Vercel (grátis em https://vercel.com)
+✓ Conta GitHub (grátis em https://github.com)
+✓ Git instalado (https://git-scm.com/download)
+
+
+🔧 TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ Modelos aparecem cinzentos/não carregam
+→ Verificar browser console (F12) por 404 errors
+→ Confirmar que todos os .stl/.obj estão em /data/
+
+❌ Página 404 no Vercel
+→ Confirmar que GitHub push foi bem-sucedido (git push origin main)
+→ Aguardar 30 segundos após push (Vercel detecta e reconstrói)
+→ Limpar cache do navegador (Ctrl+F5 / Cmd+Shift+R)
+
+❌ Lentidão no carregamento
+→ Modelos grandes (20+ MB) — isso é normal na primeira carga
+→ Vercel cacheará os modelos após primeira carga
+
+
+💡 DICAS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Vercel atualiza AUTOMATICAMENTE quando você faz 'git push'
+  (não precisa fazer deploy novamente)
+
+• Para testar localmente antes de fazer push:
+  $ python3 -m http.server 8000
+  → Visite http://localhost:8000
+
+• Dashboard é otimizado para 1920×1080 (TV/monitor em sala cirúrgica)
+
+• Todos os modelos 3D são carregados de 'data/' (path relativo)
+  → Funciona tanto localmente quanto no Vercel
+
+
+📞 SUPORTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Docs Vercel: https://vercel.com/docs
+Git Help:    https://git-scm.com/doc
+GitHub:      https://docs.github.com
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Status: ✅ PRONTO PARA DEPLOYMENT
+
+Pasta de deployment: /tmp/schulterplan-vercel
+Versão: 1.0 (SchulterPlan Implantcast Edition)
+Data: 2026-05-24
+
+═══════════════════════════════════════════════════════════════════════════════

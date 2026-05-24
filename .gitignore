@@ -1,0 +1,22 @@
+# Vercel
+.vercel/
+.vercel
+
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local

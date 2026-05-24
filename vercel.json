@@ -1,0 +1,29 @@
+{
+  "name": "SchulterPlan",
+  "version": 2,
+  "buildCommand": "echo 'Static site, no build needed'",
+  "devCommand": "npx http-server -p 3000 -c-1",
+  "env": {},
+  "public": true,
+  "rewrites": [
+    {
+      "source": "/surgery-dashboard",
+      "destination": "/surgery-dashboard.html"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/data/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

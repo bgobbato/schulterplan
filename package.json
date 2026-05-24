@@ -1,0 +1,21 @@
+{
+  "name": "schulterplan",
+  "version": "1.0.0",
+  "description": "SchulterPlan - 3D Surgical Planning for Shoulder Arthroplasty with Implantcast Agilon Implants",
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server -p 8000 -c-1",
+    "dev": "npx http-server -p 3000 -c-1"
+  },
+  "keywords": [
+    "shoulder",
+    "surgery",
+    "planning",
+    "3d",
+    "arthroplasty",
+    "implantcast",
+    "agilon"
+  ],
+  "author": "Dr. Bruno Gobbato",
+  "license": "Proprietary"
+}
