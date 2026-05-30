@@ -3860,7 +3860,8 @@ async function initMPR() {
     setupMPRToolbar();
     updateMPRInfo();
     initMPROverlay();
-    updateImplantOverlayMesh();
+    addLandmarkMarkers();          // coord validation
+    updateImplantOverlayMesh();    // (currently no-op while validating)
     drawMPROverlay();
     loadingEl.classList.add('hidden');
   } catch (err) {
@@ -3962,6 +3963,40 @@ function initMPROverlay() {
   }
 }
 
+/* Place colored sphere markers at known scapula landmarks. Used to visually
+   verify the pipeline → NiiVue coordinate alignment BEFORE trusting the
+   implant overlay. Each landmark gets a distinct color. */
+function addLandmarkMarkers() {
+  const ov = MPR.overlay;
+  if (!ov) return;
+  const lm = state.planning?._pipelinePayload?.landmarks?.scapula;
+  if (!lm) return;
+  const points = [
+    { key: 'glenoid_center',    color: 0xffaa00, label: 'GC (orange)' },
+    { key: 'trigonum',          color: 0xffffff, label: 'Trigonum (white)' },
+    { key: 'glenoid_anterior',  color: 0x00ccff, label: 'Ant (cyan)' },
+    { key: 'glenoid_posterior', color: 0xff4488, label: 'Post (pink)' },
+    { key: 'glenoid_superior',  color: 0x44ff88, label: 'Sup (green)' },
+    { key: 'glenoid_inferior',  color: 0xcc44ff, label: 'Inf (purple)' },
+  ];
+  ov.landmarks = [];
+  for (const p of points) {
+    const pos = lm[p.key]?.xyz_mm;
+    if (!pos) { console.warn('[MPR-overlay] landmark missing:', p.key); continue; }
+    const nv = pipelineToNiiVueMM(pos);
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(2.5, 16, 16),
+      new THREE.MeshBasicMaterial({ color: p.color })
+    );
+    mesh.position.set(nv[0], nv[1], nv[2]);
+    mesh.userData.isLandmark = true;
+    mesh.userData.key = p.key;
+    ov.scene.add(mesh);
+    ov.landmarks.push(mesh);
+    console.log(`[MPR-overlay] ${p.label}: pipeline mm=${pos.map(v=>v.toFixed(1)).join(',')} → NiiVue mm=${nv.map(v=>v.toFixed(1)).join(',')}`);
+  }
+}
+
 /* Build / refresh the implant contour (EdgesGeometry wireframe) inside
    the overlay scene. Called whenever the implant model or its pose changes. */
 function updateImplantOverlayMesh() {
@@ -3974,6 +4009,9 @@ function updateImplantOverlayMesh() {
     ov.implantLines.material.dispose();
     ov.implantLines = null;
   }
+  // Skip implant overlay while we're validating landmarks (uncomment to re-enable)
+  return;
+  // eslint-disable-next-line no-unreachable
   if (!implantMesh) return;
   // Find the actual Mesh geometry inside the implant Group
   let geom = null;
