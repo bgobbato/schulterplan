@@ -11,7 +11,27 @@ Aplicacao web 3D para planejamento de protese de ombro (glenoide) com implantes
 Implantcast Agilon. Single HTML file + Three.js via importmap. Sem build step.
 
 ## Planos abertos
-- **`MPR_PLAN.md`** — Plano detalhado da implementação MPR (CT). Status: aprovado, não iniciado. Estratégia de seguranca: branch git + arquivo paralelo `test-heroui-ct.html`, NUNCA modificar `test-heroui.html` original ate MVP testado.
+- **`MPR_PLAN.md`** v2 — Plano detalhado da implementação MPR (CT). Status: **MVP 1 OK** (Phase 0-2 + coord fix). Branch ativo: `mpr-dev`. Arquivo: `test-heroui-ct.html`.
+- **`MPR_HAR_ANALYSIS_REPORT.md`** — Análise CustomedAI (referência arquitetural, Phase 7 Option D).
+
+## MPR — estado atual (30/maio/2026)
+Branch `mpr-dev` (head `4872e38`). `test-heroui.html` original **intacto**. Funciona:
+- Botão `CT` na topbar abre coluna 400px com NiiVue 0.69 + NIfTI 64MB (gitignored em `data/`)
+- Layout `MULTIPLANAR_TYPE.COLUMN` (axial/coronal/sagittal empilhados)
+- Scroll wheel por linha (top=Z axial, mid=Y coronal, bot=X sagittal)
+- Crosshair verde em `glenoid_center` exato (X invertido entre pipeline e RAS NiiVue, resolvido via `pipelineToNiiVueMM`)
+- Toolbar scroll/pan/zoom/W-L
+- Label em coord pipeline
+
+**Próximas fases (recomendado)**: Phase 4 **Option D direto** (skip Option A), simplified — Three.js render target + canvas overlay, ortho camera por slice. ~2.5h. Phase 5 sync com adjustments. Detalhes em `MPR_PLAN.md`.
+
+**Lições aprendidas**:
+- NiiVue API `moveCrosshairInVox(dx, dy, dz)` é scalars, NÃO array
+- `MULTIPLANAR_TYPE.GRID` (default) deixa 4° quadrante vazio mesmo com `multiplanarShowRender: NEVER` — usar COLUMN para coluna estreita
+- Pipeline `xyz_mm` e NiiVue RAS têm X com sinal oposto
+- Sempre `clampCrosshairFrac()` + `drawScene()` após `moveCrosshairInVox` para evitar slices sumirem fora do volume
+
+## Arquivos Principais
 
 ## Arquivos Principais
 - `test-heroui.html` — UI principal da escapula (HeroUI dark theme), toda a logica JS inline
