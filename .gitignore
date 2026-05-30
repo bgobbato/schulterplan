@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+
+# Compressed / temp
+*.cpgz
+*.har
+
+# Python
+__pycache__/
+
+# Claude Code internals
+.claude/
+
+# ── Heavy data folders (NOT for GitHub) ──
+# CT scans, raw scenarios, third-party planning data
+CT-test/
+EquinoxePlanning/
+Implantcast/
+scenarios/
+storage/
+
+# Separate Vercel deploy folder (lives in its own subrepo)
+schulterplan-vercel/
+
+# Generated reports / artifacts
+pdf-report/
+deploy/
+
+# Local-only scratch
+*.local.json
+*.log
+*.tmp
+
+# Large NIfTI files (use git-lfs if these need to be tracked)
+*.nii
+*.nii.gz
+*.tar.gz

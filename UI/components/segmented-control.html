@@ -1,0 +1,29 @@
+<!-- ── Segmented Control ──
+     Mutually exclusive options. Exactly one .seg-btn carries .active.   -->
+
+<div class="segmented" role="tablist" aria-label="View">
+  <button class="seg-btn" role="tab" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2L8 6v6l-2 2v6l4-2 2 2 2-2 4 2v-6l-2-2V6l-4-4z"/>
+    </svg>
+    <span>anterior</span>
+  </button>
+  <button class="seg-btn active" role="tab" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <ellipse cx="12" cy="12" rx="6" ry="9"/>
+    </svg>
+    <span>glenoid</span>
+  </button>
+  <button class="seg-btn" role="tab" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M14 2v6l-3 3v6l3 5h-4l-2-5v-6l2-3V2z"/>
+    </svg>
+    <span>lateral</span>
+  </button>
+  <button class="seg-btn" role="tab" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 22l-4-4h3V10H8l4-4 4 4h-3v8h3z"/>
+    </svg>
+    <span>inferior</span>
+  </button>
+</div>

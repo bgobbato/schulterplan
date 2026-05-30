@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>SchulterPlan — Humerus Planning</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg-base: #000000;
+    --bg-surface: #18181b;
+    --bg-card: rgba(39,39,42,0.7);
+    --bg-card-hover: rgba(63,63,70,0.5);
+    --bg-glass: rgba(24,24,27,0.6);
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --primary: #17c5b0;
+    --primary-hover: #14b8a6;
+    --primary-glow: rgba(23,197,176,0.25);
+    --primary-soft: rgba(23,197,176,0.12);
+    --accent: #f5a623;
+    --accent-soft: rgba(245,166,35,0.12);
+    --accent-glow: rgba(245,166,35,0.30);
+    --danger: #f31260;
+    --success: #17c964;
+    --warning: #f5a524;
+    --info: #7dd3fc;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.30);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.40);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.50);
+    --shadow-glow: 0 0 20px var(--primary-glow);
+    --shadow-accent: 0 0 16px var(--accent-glow);
+    --blur: blur(16px);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: 0.2s var(--ease);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-rows: 60px 1fr;
+    height: 100vh;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    z-index: 20;
+  }
+  .topbar-logo { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo img { height: 32px; }
+  .topbar-logo h1 {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.3px;
+    background: linear-gradient(135deg, var(--primary), var(--info));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .topbar .page-tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid rgba(245,166,35,0.2);
+  }
+  .topbar .case-info {
+    font-size: 12px; color: var(--text-muted);
+    padding: 4px 12px;
+    background: var(--bg-card);
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .topbar .spacer { flex: 1; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px; font-weight: 500; font-family: inherit;
+    border: none; border-radius: var(--radius-md);
+    cursor: pointer; transition: all var(--transition);
+    position: relative; overflow: hidden; white-space: nowrap;
+    background: transparent; color: var(--text-primary);
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+  .btn-primary { background: var(--primary); color: #000; }
+  .btn-primary:hover { background: var(--primary-hover); box-shadow: var(--shadow-glow); transform: translateY(-1px); }
+  .btn-flat { background: var(--primary-soft); color: var(--primary); }
+  .btn-flat:hover { background: rgba(23,197,176,0.2); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg-card-hover); border-color: var(--border-hover); color: var(--text-primary); }
+  .btn-accent { background: var(--accent-soft); color: var(--accent); }
+  .btn-accent.active { background: var(--accent); color: #000; box-shadow: var(--shadow-accent); }
+  .btn-danger { background: rgba(243,18,96,0.12); color: var(--danger); }
+  .btn-danger:hover { background: rgba(243,18,96,0.2); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: var(--radius-sm); }
+
+  /* ── Segmented Control ── */
+  .segmented {
+    display: flex;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 2px;
+    border: 1px solid var(--border);
+  }
+  .seg-btn {
+    padding: 6px 14px;
+    font-size: 12px; font-weight: 500; font-family: inherit;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .seg-btn:hover { color: var(--text-secondary); }
+  .seg-btn.active {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .seg-btn svg { width: 18px; height: 18px; }
+  .seg-btn span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .sidebar.right { border-right: none; border-left: 1px solid var(--border); }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .section-label {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin: 20px 0 10px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg-card);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    transition: all var(--transition);
+  }
+  .measure-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .measure-row:last-child { border-bottom: none; }
+  .measure-row .label { font-size: 13px; color: var(--text-secondary); }
+  .measure-row .value {
+    font-size: 14px; font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .measure-row .value.pending { color: var(--text-muted); font-weight: 500; }
+  .measure-row small { display: block; font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+  .badge-method {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+    vertical-align: 1px;
+  }
+  .badge-method.computed {
+    background: rgba(23,201,100,0.15);
+    color: var(--success);
+    border: 1px solid rgba(23,201,100,0.25);
+  }
+  .badge-method.todo {
+    background: rgba(243,18,96,0.10);
+    color: var(--danger);
+    border: 1px solid rgba(243,18,96,0.25);
+  }
+  .badge-method.pipeline {
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99,102,241,0.30);
+  }
+
+  /* ── Dual Viewer (the centerpiece) ── */
+  .viewer-area {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: #0a0a0f;
+    overflow: hidden;
+  }
+  .viewport {
+    position: relative;
+    background: #1a1a2e;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+  .viewport:last-child { border-right: none; }
+  .viewport canvas { display: block; width: 100%; height: 100%; }
+
+  .viewport-label {
+    position: absolute;
+    top: 10px; left: 12px;
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.4);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* SVG overlay for the lasso polygon */
+  .lasso-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .lasso-overlay polyline,
+  .lasso-overlay polygon {
+    fill: rgba(245,166,35,0.15);
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 3;
+  }
+
+  /* When lasso mode is active, cursor becomes a lasso icon inside viewers.
+     Inline SVG data URI — color matches the accent (gold) for visibility. */
+  .lasso-mode .viewport {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'><ellipse cx='15' cy='10' rx='9' ry='6' fill='none' stroke='%23f5a623' stroke-width='2'/><path d='M15 16 Q12 21 9 25' fill='none' stroke='%23f5a623' stroke-width='2' stroke-linecap='round'/><circle cx='9' cy='25' r='2' fill='%23f5a623'/></svg>") 9 25, crosshair;
+  }
+  /* Subtle outer glow on the active lasso button so it reads as "tool engaged" */
+  #btn-lasso.active {
+    box-shadow: var(--shadow-accent), inset 0 0 0 1px var(--accent);
+  }
+
+  /* Mode banner — shown when a tool requires user input */
+  .mode-banner {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid rgba(245,166,35,0.3);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    z-index: 10;
+    pointer-events: none;
+    animation: pulse-hint 1.5s infinite;
+  }
+  @keyframes pulse-hint { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* ── Measurement list (3D) ── */
+  .measure-tool-section { display: flex; flex-direction: column; gap: 8px; }
+  .measure-tool-header { display: flex; align-items: center; gap: 8px; }
+  #measure-list { display: flex; flex-direction: column; gap: 4px; }
+  .measure-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    font-size: 12px;
+  }
+  .measure-item .measure-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .measure-item .measure-label { flex: 1; color: var(--text-secondary); }
+  .measure-item .measure-value { font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .measure-item .measure-delete { cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 2px; }
+  .measure-item .measure-delete:hover { color: var(--danger); }
+
+  /* ── Tool group (a label + button stack) ── */
+  .tool-group { display: flex; flex-direction: column; gap: 6px; }
+
+  /* ── Stats bar (mesh info) ── */
+  .stats-bar {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-top: 1px dashed var(--border);
+    border-bottom: 1px dashed var(--border);
+    margin: 8px 0 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur);
+    color: var(--text-primary);
+    padding: 12px 24px;
+    border-radius: var(--radius-xl);
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: all 0.3s var(--ease);
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Credits ── */
+  .credits {
+    position: fixed; bottom: 10px; right: 16px;
+    font-size: 10px; color: var(--text-muted);
+    opacity: 0.4; pointer-events: none; text-align: right;
+    line-height: 1.4; z-index: 10;
+  }
+
+  /* ── Loading overlay ── */
+  .loading {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    color: var(--text-secondary);
+    font-size: 13px;
+    gap: 12px;
+    z-index: 50;
+  }
+  .loading.hidden { display: none; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 768px) {
+    .app { display: flex; flex-direction: column; height: auto; overflow: auto; }
+    body { overflow: auto; }
+    .viewer-area { grid-template-columns: 1fr; }
+    .viewport { height: 50vw; min-height: 240px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ── TOPBAR ── -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <img src="data/logo_implantcast.png" alt="ic"/>
+      <h1>SchulterPlan</h1>
+    </div>
+    <span class="page-tag">Humerus</span>
+    <a href="test-heroui.html" class="btn btn-flat btn-sm" style="text-decoration:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Scapula
+    </a>
+    <span class="case-info" id="case-info">humerus.obj</span>
+
+    <div class="spacer"></div>
+
+    <!-- View-switcher: changes ONLY the lateral (right) viewport -->
+    <span class="section-label" style="margin:0 6px 0 0;color:var(--text-muted)">Right view:</span>
+    <div class="segmented" id="lateral-view-switch">
+      <button class="seg-btn active" data-view="lateral">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6v20H9z" opacity="0.7"/><path d="M9 2l-3 3v14l3 3M15 2l3 3v14l-3 3" opacity="0.3"/></svg>
+        <span>lateral</span>
+      </button>
+      <button class="seg-btn" data-view="anterior">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="4" opacity="0.7"/><rect x="9" y="9" width="6" height="13" rx="2" opacity="0.7"/></svg>
+        <span>anterior</span>
+      </button>
+      <button class="seg-btn" data-view="superior">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8" opacity="0.6"/><circle cx="12" cy="12" r="3" opacity="0.9"/></svg>
+        <span>superior</span>
+      </button>
+      <button class="seg-btn" data-view="inferior">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8" opacity="0.3"/><circle cx="12" cy="12" r="3" opacity="0.9"/></svg>
+        <span>inferior</span>
+      </button>
+    </div>
+
+    <!-- Originals vs Edited view toggle -->
+    <button class="btn btn-ghost btn-sm" id="btn-show-original" title="Toggle between original and edited mesh">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+      Showing Edited
+    </button>
+  </div>
+
+  <!-- ── LEFT SIDEBAR ── Measurements -->
+  <aside class="sidebar left">
+    <div class="section-label">Humerus Measurements</div>
+    <div class="card">
+      <div class="measure-row">
+        <span class="label">Head radius
+          <small><span class="badge-method pipeline">pipeline</span> sphere fit</small>
+        </span>
+        <span class="value pending" id="m-head-radius">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Head diameter
+          <small><span class="badge-method pipeline">pipeline</span> radius × 2</small>
+        </span>
+        <span class="value pending" id="m-head-diam">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Neck-shaft angle
+          <small><span class="badge-method pipeline">pipeline</span> canal × articular</small>
+        </span>
+        <span class="value pending" id="m-nsa">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Posterior subluxation
+          <small><span class="badge-method pipeline">pipeline</span> PSI (Friedman)</small>
+        </span>
+        <span class="value pending" id="m-sublux">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Posterior offset
+          <small><span class="badge-method pipeline">pipeline</span> head-to-Friedman</small>
+        </span>
+        <span class="value pending" id="m-post-offset">—</span>
+      </div>
+    </div>
+
+    <div class="section-label">Scapula Measurements</div>
+    <div class="card">
+      <div class="measure-row">
+        <span class="label">Retroversion
+          <small><span class="badge-method pipeline">pipeline</span> Friedman axis</small>
+        </span>
+        <span class="value pending" id="m-retro">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Inferior inclination
+          <small><span class="badge-method pipeline">pipeline</span> Friedman SI</small>
+        </span>
+        <span class="value pending" id="m-incl">—</span>
+      </div>
+    </div>
+
+    <button class="btn btn-flat btn-sm" id="btn-compute-measurements" style="width:100%;margin-top:10px">
+      Re-compute (local sphere fit)
+    </button>
+
+    <div class="section-label">Comments</div>
+    <div id="comments-list" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">No comments yet.</div>
+    <textarea rows="2" placeholder="Add a comment..." id="comment-input" style="width:100%;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;resize:vertical;margin-bottom:6px"></textarea>
+    <button class="btn btn-flat btn-sm" style="width:100%" id="btn-add-comment">Post Comment</button>
+  </aside>
+
+  <!-- ── DUAL VIEWER ── -->
+  <main class="viewer-area" id="viewer-area">
+    <div class="viewport" id="vp-anterior">
+      <canvas id="canvas-anterior"></canvas>
+      <span class="viewport-label">anterior</span>
+      <svg class="lasso-overlay" id="lasso-anterior" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="viewport" id="vp-lateral">
+      <canvas id="canvas-lateral"></canvas>
+      <span class="viewport-label" id="lateral-label">lateral</span>
+      <svg class="lasso-overlay" id="lasso-lateral" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div>Loading humerus model…</div>
+    </div>
+
+    <!-- Mode banner appears when tools are active -->
+    <div class="mode-banner" id="mode-banner" style="display:none"></div>
+  </main>
+
+  <!-- ── RIGHT SIDEBAR ── Tools -->
+  <aside class="sidebar right">
+    <div class="section-label">Osteophyte Removal</div>
+    <div class="tool-group">
+      <button class="btn btn-accent" id="btn-lasso" style="justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="13" cy="9" rx="9" ry="6"/>
+          <path d="M13 15 Q11 19 9 22"/>
+          <circle cx="9" cy="22" r="1.3" fill="currentColor" stroke="none"/>
+        </svg>
+        <span id="btn-lasso-label">Remove Osteophytes</span>
+      </button>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.5;padding:4px 2px">
+        Activate the lasso, then draw a closed shape in either view around the bone you want to remove.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+        <button class="btn btn-ghost btn-sm" id="btn-undo" disabled>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7"/>
+          </svg>
+          Undo
+        </button>
+        <button class="btn btn-danger btn-sm" id="btn-reset">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+          </svg>
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Measurements</div>
+    <div class="measure-tool-section">
+      <div class="measure-tool-header">
+        <button class="btn btn-ghost btn-sm" id="btn-measure">📏 Measure</button>
+        <button class="btn btn-ghost btn-sm" id="btn-clear-measures" style="margin-left:auto;font-size:11px">Clear All</button>
+      </div>
+      <div id="measure-list"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Neck Cut Plane (135°)</div>
+    <div id="neck-plane-controls" style="display:flex;flex-direction:column;gap:8px">
+      <label class="plane-toggle" style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="toggle-plane-135" checked>
+        <span class="plane-swatch" style="width:14px;height:14px;background:#10b981;border-radius:3px;flex-shrink:0"></span>
+        <span>Show plane</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+        <span style="font-size:12px;color:var(--text-secondary);flex:1">Offset (sup/inf):</span>
+        <button class="btn btn-ghost btn-sm" id="btn-plane-135-down" title="Move inferior (toward distal)" style="padding:3px 8px">↓</button>
+        <span id="plane-135-offset" style="font-size:12px;font-variant-numeric:tabular-nums;min-width:52px;text-align:center">0.0 mm</span>
+        <button class="btn btn-ghost btn-sm" id="btn-plane-135-up" title="Move superior (toward head)" style="padding:3px 8px">↑</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:12px;color:var(--text-secondary);flex:1">Tilt (sagittal):</span>
+        <button class="btn btn-ghost btn-sm" id="btn-plane-135-tilt-fwd" title="Tilt anterior edge down" style="padding:3px 8px">⟲</button>
+        <span id="plane-135-tilt" style="font-size:12px;font-variant-numeric:tabular-nums;min-width:52px;text-align:center">0.0°</span>
+        <button class="btn btn-ghost btn-sm" id="btn-plane-135-tilt-back" title="Tilt anterior edge up" style="padding:3px 8px">⟳</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-plane-135-reset" style="width:100%">Reset offset & tilt</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Display</div>
+    <button class="btn btn-ghost btn-sm" id="btn-wireframe" style="width:100%">Wireframe</button>
+    <button class="btn btn-ghost btn-sm" id="btn-reset-cameras" style="width:100%;margin-top:6px">Recenter Cameras</button>
+    <button class="btn btn-ghost btn-sm" id="btn-medular" style="width:100%;margin-top:6px" title="Axial cross-section at mid-shaft to inspect medullary canal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="3.5" stroke-dasharray="2 2"/>
+      </svg>
+      Medular
+    </button>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="credits">
+  SchulterPlan — humerus<br>
+  Created by Dr. Bruno Gobbato
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+/* ─────────────────────────────────────────────────────────────────────
+   State
+   ───────────────────────────────────────────────────────────────────── */
+const state = {
+  // Geometries
+  originalGeometry: null,   // immutable clone of the loaded mesh (never mutated)
+  editedGeometry:   null,   // current working geometry (positions only, non-indexed)
+  undoStack: [],            // array of Float32Array snapshots (positions before each removal)
+
+  // Display
+  showingOriginal: false,
+  wireframe: false,
+  rightView: 'lateral',
+  medularMode: false,
+
+  // Tools
+  lassoMode: false,
+  measureMode: false,
+  lassoActiveVp: null,      // 'anterior' | 'lateral' while drawing
+  lassoPoints: [],          // [{x,y}, ...] in screen pixels of active viewport
+
+  // Anatomy (computed at load)
+  bbox: null,
+  meshCenter: new THREE.Vector3(),
+  meshSize:   new THREE.Vector3(),
+  longAxis:   'y',          // 'x'|'y'|'z' — overwritten at load
+  headEnd:    +1,           // +1 if head sits on +longAxis side; -1 otherwise
+
+  // Comments
+  comments: [],
+
+  // Pipeline-derived data
+  pipelineLandmarks: null,  // dict of Vector3 in world frame
+  side: 'R',                // 'R' or 'L'
+  caseId: null,             // for localStorage key
+
+  // Osteophyte removal — accumulated removed triangle positions in world frame
+  // (post-anatomical-rotation). 9 floats per triangle (3 vertices × xyz).
+  removedTriangles: [],     // growing JS array of floats; flattened on save
+  anatomicalMatrix: null,   // Matrix4 elements (16 floats) of the rotation applied to OBJ
+
+  // Neck cut plane (135°, green)
+  plane135Meshes: [],       // [vpA-mesh, vpL-mesh]
+  plane135Offset: 0,        // mm shift along +Y (superior/inferior)
+  plane135TiltDeg: 0,       // sagittal tilt around X axis (anterior/posterior pivot)
+  plane135BaseCenter: null, // Vector3 in world frame
+  plane135BaseNormal: null, // Vector3 in world frame (untilted)
+};
+
+const MEASURE_COLORS = [0x00ccff, 0xff6644, 0xffcc00, 0xcc44ff, 0x44ff88, 0xff4488];
+const measurements = [];   // {id, vp, sphereA, sphereB, line, color, distance}
+let measureNextId = 1;
+let measurePendingSphere = null;
+let measurePendingVp = null;
+
+/* ─────────────────────────────────────────────────────────────────────
+   Two viewports — each has its own scene, camera, renderer, controls.
+   Both meshes share the SAME BufferGeometry instance so that any edit
+   propagates without copying data.
+   ───────────────────────────────────────────────────────────────────── */
+function makeViewport(canvasId, label) {
+  const canvas = document.getElementById(canvasId);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a2e);
+
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
+  camera.position.set(0, 0, 400);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.1;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const dl1 = new THREE.DirectionalLight(0xffffff, 0.7);  dl1.position.set( 1, 1, 1); scene.add(dl1);
+  const dl2 = new THREE.DirectionalLight(0xffffff, 0.35); dl2.position.set(-1,-1,-1); scene.add(dl2);
+
+  return { canvas, renderer, scene, camera, controls, mesh: null, label };
+}
+
+const vpA = makeViewport('canvas-anterior', 'anterior');  // left — always anterior
+const vpL = makeViewport('canvas-lateral',  'lateral');   // right — switchable
+
+const VIEWPORTS = { anterior: vpA, lateral: vpL };
+
+/* ─────────────────────────────────────────────────────────────────────
+   Material — single shared so updating once styles both meshes
+   ───────────────────────────────────────────────────────────────────── */
+const boneMaterial = new THREE.MeshPhongMaterial({
+  color: 0xeeeae0,
+  flatShading: false,
+  side: THREE.DoubleSide,
+  shininess: 18,
+  specular: 0x222222,
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   Load OBJ — pipeline first, fallback to legacy GPS file
+   ───────────────────────────────────────────────────────────────────── */
+
+// Load a humerus OBJ via OBJLoader; return Promise<THREE.BufferGeometry>
+function loadHumerusObj(url, onProgress) {
+  const loader = new OBJLoader();
+  return new Promise((resolve, reject) => {
+    loader.load(url, (obj) => {
+      let srcMesh = null;
+      obj.traverse((c) => { if (!srcMesh && c.isMesh) srcMesh = c; });
+      if (!srcMesh) return reject(new Error('No mesh found inside OBJ.'));
+      let geom = srcMesh.geometry;
+      if (geom.index) geom = geom.toNonIndexed();
+      geom.computeVertexNormals();
+      resolve(geom);
+    }, onProgress, reject);
+  });
+}
+
+// Build the rotation matrix that orients the humerus in the patient's anatomical frame:
+//   World +Y = humerus vertical (canal_distal → head_center)
+//   World +Z = anterior  (glenoid_ap, projected perpendicular to Y)
+//   World +X = patient's right side (Y × Z, right-handed)
+// Returns a Matrix4 with rotation ONLY (no translation — caller adds bbox centering).
+function buildAnatomicalRotation(headXYZ, distalXYZ, apXYZ) {
+  const head   = new THREE.Vector3(...headXYZ);
+  const distal = new THREE.Vector3(...distalXYZ);
+
+  // Primary: vertical (head_up direction)
+  const Y = new THREE.Vector3().subVectors(head, distal).normalize();
+
+  // Secondary: anterior. Project AP axis onto plane perpendicular to Y.
+  // If apXYZ is missing, fall back to any orthogonal direction.
+  let apRaw = apXYZ ? new THREE.Vector3(...apXYZ)
+                    : (Math.abs(Y.x) < 0.9 ? new THREE.Vector3(1,0,0) : new THREE.Vector3(0,0,1));
+  const Z = apRaw.clone().addScaledVector(Y, -apRaw.dot(Y)).normalize();
+
+  // Right-handed: X = Y × Z (points to patient's right when Z = anterior, Y = superior)
+  const X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+
+  // Build matrix whose ROWS are X, Y, Z — this maps a vertex v (in patient coords)
+  // to world coords (world_x = X·v, world_y = Y·v, world_z = Z·v).
+  const R = new THREE.Matrix4();
+  R.set(
+    X.x, X.y, X.z, 0,
+    Y.x, Y.y, Y.z, 0,
+    Z.x, Z.y, Z.z, 0,
+    0,   0,   0,   1
+  );
+  return { matrix: R, X, Y, Z };
+}
+
+// Auto-detect long axis + head end (used as fallback when no pipeline landmarks)
+function autoDetectAxes(geom, size) {
+  const axesList = ['x','y','z']; axesList.sort((a,b) => size[b] - size[a]);
+  const longA = axesList[0];
+  const longIdx = { x: 0, y: 1, z: 2 }[longA];
+  const pos = geom.attributes.position.array;
+  let lowCnt = 0, highCnt = 0;
+  const halfLen = size[longA] * 0.5;
+  const sliceT  = size[longA] * 0.08;
+  for (let i = longIdx; i < pos.length; i += 3) {
+    const v = pos[i];
+    if (v < -halfLen + sliceT) lowCnt++;
+    if (v >  halfLen - sliceT) highCnt++;
+  }
+  return { longAxis: longA, headEnd: (highCnt >= lowCnt) ? +1 : -1 };
+}
+
+// Populate the sidebar with pipeline measurements
+function populatePipelineMeasurements(payload) {
+  if (!payload || !payload.measurements) return;
+  const fmt = (v, suf, dec = 1) =>
+    (v === undefined || v === null) ? '—' : `${Number(v).toFixed(dec)}${suf}`;
+  const setVal = (id, txt) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.classList.toggle('pending', txt === '—');
+  };
+
+  const h = (payload.measurements.humerus) || {};
+  setVal('m-head-radius', fmt(h.humeral_head_radius_mm?.value, ' mm', 2));
+  setVal('m-head-diam',   fmt(h.humeral_head_diameter_mm?.value, ' mm', 2));
+  setVal('m-nsa',         fmt(h.neck_shaft_angle_deg?.value, '°'));
+  setVal('m-sublux',      fmt(h.posterior_subluxation_index_percent?.value, '%'));
+  setVal('m-post-offset', fmt(h.posterior_offset_mm?.value, ' mm', 2));
+
+  const s = (payload.measurements.scapula) || {};
+  setVal('m-retro', fmt(s.retroversion_deg?.value, '°'));
+  setVal('m-incl',  fmt(s.inclination_deg?.value, '°'));
+
+  // Header case info: patient · side
+  const caseEl = document.getElementById('case-info');
+  if (caseEl && payload.case) {
+    const sideLabel = payload.case.side === 'R' ? 'Right' : payload.case.side === 'L' ? 'Left' : payload.case.side;
+    caseEl.textContent = `${payload.case.patient_id || payload.case.case_id} · ${sideLabel}`;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Anatomic Neck Cut Planes
+   ───────────────────────────────────────────────────────────────────── */
+
+// Build a 50%-transparent square mesh oriented so its surface lies in the
+// plane defined by `center` and `normal` (both in world coords).
+function makePlaneMesh(center, normal, color, size = 80) {
+  const geom = new THREE.PlaneGeometry(size, size);
+  const mat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0.5,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.renderOrder = 100;
+  // Plane geometry default normal is +Z; rotate so that becomes our `normal`
+  const q = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 0, 1),
+    normal.clone().normalize()
+  );
+  mesh.quaternion.copy(q);
+  mesh.position.copy(center);
+  return mesh;
+}
+
+// Create the green 135° neck cut plane in both viewports.
+function createCutPlanes(payload) {
+  if (!payload?.planes?.humeral_neck_plane_135 || !state.pipelineLandmarks) return;
+  const center = state.pipelineLandmarks.anatomic_neck_center;
+  if (!center) {
+    console.warn('[Planes] anatomic_neck_center not available — skipping cut plane.');
+    return;
+  }
+
+  // After our anatomical rotation: canal direction = world +Y.
+  // Plane normal makes 135° with +Y, tilted toward LATERAL side.
+  // For RIGHT shoulder lateral = +X; for LEFT lateral = -X.
+  const lateralSign = (state.side === 'L') ? -1 : +1;
+  const c45 = Math.cos(Math.PI / 4);  // = sin(45°) = 0.707
+  const normal = new THREE.Vector3(lateralSign * c45, -c45, 0).normalize();
+  const green = 0x10b981;
+
+  [vpA, vpL].forEach(vp => {
+    const m = makePlaneMesh(center, normal, green);
+    vp.scene.add(m);
+    state.plane135Meshes.push(m);
+  });
+  state.plane135BaseCenter = center.clone();
+  state.plane135BaseNormal = normal.clone();
+  console.log('[Planes] 135° neck plane added — base normal:', normal.toArray().map(v=>v.toFixed(3)).join(','));
+}
+
+// Recompute mesh position + orientation from current offset & tilt
+function updatePlane135() {
+  if (!state.plane135Meshes.length) return;
+
+  // Tilt the base normal around the world X axis (sagittal tilt — pivot in AP)
+  const tiltRad = THREE.MathUtils.degToRad(state.plane135TiltDeg);
+  const tiltQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), tiltRad);
+  const tiltedNormal = state.plane135BaseNormal.clone().applyQuaternion(tiltQ).normalize();
+
+  // Plane center: base center + offset along +Y
+  const center = state.plane135BaseCenter.clone();
+  center.y += state.plane135Offset;
+
+  // Orient each mesh: default plane normal (+Z) → tiltedNormal
+  const orient = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 0, 1),
+    tiltedNormal
+  );
+  state.plane135Meshes.forEach(m => {
+    m.position.copy(center);
+    m.quaternion.copy(orient);
+  });
+
+  const offEl = document.getElementById('plane-135-offset');
+  if (offEl) offEl.textContent = `${state.plane135Offset.toFixed(1)} mm`;
+  const tiltEl = document.getElementById('plane-135-tilt');
+  if (tiltEl) tiltEl.textContent = `${state.plane135TiltDeg.toFixed(1)}°`;
+}
+
+function shiftPlane135(deltaMm)   { state.plane135Offset  += deltaMm; updatePlane135(); saveHumerusEdit(); }
+function tiltPlane135(deltaDeg)   { state.plane135TiltDeg += deltaDeg; updatePlane135(); saveHumerusEdit(); }
+function resetPlane135()          { state.plane135Offset = 0; state.plane135TiltDeg = 0; updatePlane135(); saveHumerusEdit(); }
+
+function setPlaneVisibility(meshArray, visible) {
+  meshArray.forEach(m => { m.visible = visible; });
+}
+
+function progressHandler(xhr) {
+  if (xhr.lengthComputable) {
+    const pct = ((xhr.loaded / xhr.total) * 100).toFixed(0);
+    document.querySelector('#loading > div:last-child').textContent =
+      `Loading humerus model… ${pct}%`;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Osteophyte removal — persist to localStorage so the surgery dashboard
+   can render the cumulative removed regions as a yellow shadow over the
+   source-with-osteophytes model.
+   ───────────────────────────────────────────────────────────────────── */
+const HUMERUS_EDIT_KEY = (caseId) => `schulterplan_humerus_edit_${caseId}`;
+
+// Float32Array <-> Base64 (compact storage in localStorage)
+function f32ToB64(arr) {
+  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+function b64ToF32(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+let _saveDebounce = null;
+function _writeHumerusEditNow() {
+  if (!state.caseId) return;
+  try {
+    const removed = new Float32Array(state.removedTriangles);
+    const payload = {
+      version: 1,
+      caseId: state.caseId,
+      side: state.side,
+      savedAt: new Date().toISOString(),
+      anatomicalMatrix: state.anatomicalMatrix, // OBJ → world (16 floats, column-major)
+      triangleCount: removed.length / 9,
+      removedB64: f32ToB64(removed),
+      // Cut plane state (offset + tilt) — read by the dashboard to render the planned osteotomy
+      plane135Offset: state.plane135Offset || 0,
+      plane135TiltDeg: state.plane135TiltDeg || 0,
+    };
+    localStorage.setItem(HUMERUS_EDIT_KEY(state.caseId), JSON.stringify(payload));
+    console.log(`[Save] Humerus edit saved: ${payload.triangleCount} triangles removed, plane135 offset=${payload.plane135Offset.toFixed(1)} tilt=${payload.plane135TiltDeg.toFixed(1)}`);
+  } catch (e) {
+    console.warn('[Save] localStorage write failed (quota?)', e);
+  }
+}
+
+function saveHumerusEdit() {
+  clearTimeout(_saveDebounce);
+  _saveDebounce = setTimeout(_writeHumerusEditNow, 400);
+}
+
+function flushHumerusSave() {
+  if (_saveDebounce) {
+    clearTimeout(_saveDebounce);
+    _saveDebounce = null;
+    _writeHumerusEditNow();
+  }
+}
+
+// Flush pending save on page unload + nav-link click
+window.addEventListener('beforeunload', flushHumerusSave);
+window.addEventListener('pagehide', flushHumerusSave);
+// Will be attached to nav-links once DOM is ready (links live in the topbar)
+document.querySelectorAll('.topbar a[href]').forEach(link => {
+  link.addEventListener('click', flushHumerusSave);
+});
+
+function loadHumerusEdit(caseId) {
+  try {
+    const raw = localStorage.getItem(HUMERUS_EDIT_KEY(caseId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed;
+  } catch (e) {
+    console.warn('[Load] Failed to read humerus edit', e);
+    return null;
+  }
+}
+
+// Given a saved Float32Array of removed-triangle positions (9 floats per tri,
+// in world frame), rebuild the edited geometry = original − removed.
+// Match triangles by hashing their 9 floats (positions are exact-saved).
+function restoreEditedFromRemoved(removedArr) {
+  if (!state.editedGeometry) return;
+  const positions = state.editedGeometry.attributes.position.array;
+  const triCount = positions.length / 9;
+
+  // Build a Set of "removed" triangle hashes (use rounded floats to absorb rounding noise)
+  const triHash = (a, b, c, d, e, f, g, h, i) =>
+    `${a.toFixed(3)},${b.toFixed(3)},${c.toFixed(3)},${d.toFixed(3)},${e.toFixed(3)},${f.toFixed(3)},${g.toFixed(3)},${h.toFixed(3)},${i.toFixed(3)}`;
+
+  const removedSet = new Set();
+  for (let t = 0; t < removedArr.length; t += 9) {
+    removedSet.add(triHash(
+      removedArr[t+0], removedArr[t+1], removedArr[t+2],
+      removedArr[t+3], removedArr[t+4], removedArr[t+5],
+      removedArr[t+6], removedArr[t+7], removedArr[t+8],
+    ));
+  }
+
+  const keep = new Float32Array(positions.length);
+  let kIdx = 0;
+  let matched = 0;
+  const removedFlat = [];
+  for (let t = 0; t < triCount; t++) {
+    const b = t * 9;
+    const h = triHash(
+      positions[b+0], positions[b+1], positions[b+2],
+      positions[b+3], positions[b+4], positions[b+5],
+      positions[b+6], positions[b+7], positions[b+8],
+    );
+    if (removedSet.has(h)) {
+      matched++;
+      for (let k = 0; k < 9; k++) removedFlat.push(positions[b+k]);
+    } else {
+      for (let k = 0; k < 9; k++) keep[kIdx + k] = positions[b+k];
+      kIdx += 9;
+    }
+  }
+
+  console.log(`[Restore] Matched ${matched}/${removedArr.length/9} previously-removed triangles`);
+  if (matched === 0) return;
+
+  const trimmed = keep.slice(0, kIdx);
+  state.editedGeometry.setAttribute('position', new THREE.BufferAttribute(trimmed, 3));
+  state.editedGeometry.deleteAttribute('normal');
+  state.editedGeometry.deleteAttribute('uv');
+  state.editedGeometry.computeVertexNormals();
+  state.editedGeometry.computeBoundingBox();
+  state.editedGeometry.computeBoundingSphere();
+  state.editedGeometry.attributes.position.needsUpdate = true;
+  vpA.mesh.geometry = state.editedGeometry;
+  vpL.mesh.geometry = state.editedGeometry;
+  state.removedTriangles = removedFlat;
+  updateMeshStats();
+}
+
+(async () => {
+  const cb = '?v=' + Date.now();
+  let pipeline = null;
+  // 1. Try pipeline planning_payload.json
+  try {
+    const r = await fetch('data/planning_payload.json' + cb);
+    if (r.ok) pipeline = await r.json();
+  } catch (e) { /* ignore */ }
+
+  // 2. Pick OBJ: pipeline humerus.obj if available, else legacy
+  let geom;
+  let usedPipeline = false;
+  try {
+    geom = await loadHumerusObj('data/humerus.obj' + cb, progressHandler);
+    usedPipeline = !!pipeline;
+    console.log('[Humerus] Loaded data/humerus.obj' + (usedPipeline ? ' (pipeline landmarks available)' : ' (no payload — auto-orient)'));
+  } catch (e) {
+    console.warn('[Humerus] pipeline OBJ failed, falling back to legacy:', e.message);
+    geom = await loadHumerusObj('data/humerus.exported.obj' + cb, progressHandler);
+  }
+
+  // 3. Orient the bone
+  if (usedPipeline && pipeline.landmarks && pipeline.landmarks.humerus) {
+    // Pipeline orientation: use head_center and canal_distal to make the vertical
+    // axis match world +Y, with the head at the top.
+    const lm = pipeline.landmarks.humerus;
+    const head   = lm.humeral_head_center && lm.humeral_head_center.xyz_mm;
+    const distal = (lm.humeral_canal_distal && lm.humeral_canal_distal.xyz_mm)
+                || (lm.humeral_shaft_distal_center && lm.humeral_shaft_distal_center.xyz_mm);
+    if (head && distal) {
+      // Anatomical orientation using scapula AP axis to define "anterior":
+      //   World +Y = humerus vertical (canal_distal → head_center)
+      //   World +Z = anterior  (glenoid_ap projected ⟂ Y)
+      //   World +X = patient's right (Y × Z, right-handed)
+      const apAxis = pipeline?.axes?.scapula?.glenoid_ap?.vector_xyz;
+      const side = pipeline?.case?.side || 'R'; // 'R' or 'L'
+      const { matrix } = buildAnatomicalRotation(head, distal, apAxis);
+
+      // Step 1: rotate geometry into the anatomical frame
+      geom.applyMatrix4(matrix);
+      geom.computeBoundingBox();
+
+      // Step 2: re-center bbox so the bone is visually centered in the viewport
+      const bbCenter = new THREE.Vector3(); geom.boundingBox.getCenter(bbCenter);
+      geom.translate(-bbCenter.x, -bbCenter.y, -bbCenter.z);
+      geom.computeBoundingBox();
+      geom.computeBoundingSphere();
+      geom.computeVertexNormals();
+
+      const size = new THREE.Vector3(); geom.boundingBox.getSize(size);
+      state.originalGeometry = geom.clone();
+      state.editedGeometry   = geom;
+      state.bbox             = geom.boundingBox.clone();
+      state.meshSize.copy(size);
+
+      // After this transform: bone axis = world Y, anterior = world +Z, lateral = ±X
+      state.longAxis = 'y';
+      state.headEnd  = +1;
+      state.side     = side;
+      state.caseId   = pipeline?.case?.case_id || null;
+
+      // Full transform that maps OBJ vertex → world: (M · v) − bbCenter
+      // Save the combined matrix elements (rotation + post-recenter translation)
+      const fullM = matrix.clone();
+      const tx = new THREE.Matrix4().makeTranslation(-bbCenter.x, -bbCenter.y, -bbCenter.z);
+      fullM.premultiply(tx);
+      state.anatomicalMatrix = Array.from(fullM.elements);
+
+      // Save pipeline landmarks transformed into the new world frame for future use
+      state.pipelineLandmarks = {};
+      for (const [name, val] of Object.entries(lm)) {
+        if (val && val.xyz_mm) {
+          const p = new THREE.Vector3(...val.xyz_mm).applyMatrix4(matrix);
+          p.sub(bbCenter);
+          state.pipelineLandmarks[name] = p;
+        }
+      }
+      console.log('[Humerus] Anatomical orientation applied — Y=vertical, +Z=anterior, side=' + side);
+      console.log('[Humerus] Head position after transform:', state.pipelineLandmarks.humeral_head_center?.toArray().map(v=>v.toFixed(1)).join(','));
+    } else {
+      console.warn('[Humerus] Pipeline payload found but humerus landmarks missing → auto-orient.');
+      usedPipeline = false;
+    }
+  }
+
+  // Fallback: legacy auto-detection (bbox + vertex density)
+  if (!usedPipeline) {
+    geom.computeBoundingBox();
+    const bb = geom.boundingBox.clone();
+    const size   = new THREE.Vector3(); bb.getSize(size);
+    const center = new THREE.Vector3(); bb.getCenter(center);
+    geom.translate(-center.x, -center.y, -center.z);
+    geom.computeBoundingBox();
+    geom.computeBoundingSphere();
+
+    state.originalGeometry = geom.clone();
+    state.editedGeometry   = geom;
+    state.bbox             = geom.boundingBox.clone();
+    state.meshSize.copy(size);
+
+    const { longAxis, headEnd } = autoDetectAxes(geom, size);
+    state.longAxis = longAxis;
+    state.headEnd  = headEnd;
+  }
+
+  // 4. Build meshes (shared geometry between both viewports)
+  vpA.mesh = new THREE.Mesh(state.editedGeometry, boneMaterial);
+  vpL.mesh = new THREE.Mesh(state.editedGeometry, boneMaterial);
+  vpA.scene.add(vpA.mesh);
+  vpL.scene.add(vpL.mesh);
+
+  fitCameraToView(vpA, 'anterior');
+  fitCameraToView(vpL, 'lateral');
+
+  // Populate sidebar with all pipeline measurements + neck cut planes
+  if (usedPipeline) {
+    populatePipelineMeasurements(pipeline);
+    createCutPlanes(pipeline);
+  }
+
+  // Restore previously saved osteophyte removal + cut-plane settings (if any) for this case
+  if (state.caseId) {
+    const saved = loadHumerusEdit(state.caseId);
+    if (saved) {
+      if (saved.removedB64 && saved.triangleCount > 0) {
+        const removedArr = b64ToF32(saved.removedB64);
+        // Rebuild edited geometry: original - removed (match by exact float equality
+        // per triangle; works because we always saved post-transform world positions).
+        restoreEditedFromRemoved(removedArr);
+        showToast(`Restored: ${saved.triangleCount} triangles previously removed.`);
+      }
+      // Restore cut-plane offset + tilt
+      if (typeof saved.plane135Offset === 'number')  state.plane135Offset  = saved.plane135Offset;
+      if (typeof saved.plane135TiltDeg === 'number') state.plane135TiltDeg = saved.plane135TiltDeg;
+      if (state.plane135Meshes && state.plane135Meshes.length > 0) {
+        updatePlane135();
+      }
+    }
+  }
+
+  document.getElementById('loading').classList.add('hidden');
+  showToast(usedPipeline ? 'Humerus loaded (pipeline-oriented).' : 'Humerus loaded.');
+})().catch(err => {
+  console.error(err);
+  showToast('Failed to load humerus OBJ.');
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   Camera framing per view
+   With pipeline orientation: +Y = superior (head up), +Z = anterior,
+   +X = patient's right. Lateral view depends on case side (R/L).
+   Without pipeline data, falls back to bbox-principal-axes heuristic.
+   ───────────────────────────────────────────────────────────────────── */
+function fitCameraToView(vp, viewName) {
+  if (!state.bbox) return;
+  const s = state.meshSize;
+  const maxDim = Math.max(s.x, s.y, s.z);
+  const dist = maxDim * 1.4;
+
+  // ── Pipeline path (anatomical axes) ──
+  if (state.pipelineLandmarks) {
+    const dir = new THREE.Vector3();
+    const up  = new THREE.Vector3(0, 1, 0); // superior is always world +Y
+    const lateralSign = (state.side === 'L') ? -1 : +1; // R: +X, L: -X
+
+    switch (viewName) {
+      case 'anterior':
+        dir.set(0, 0, 1); // camera at +Z (anterior), looking at origin
+        break;
+      case 'lateral':
+        dir.set(lateralSign, 0, 0); // camera at ±X (lateral, side-dependent)
+        break;
+      case 'superior':
+        dir.set(0, 1, 0); // above the head, looking down
+        up.set(0, 0, -1); // posterior is "up" on screen
+        break;
+      case 'inferior':
+        dir.set(0, -1, 0); // below distal, looking up
+        up.set(0, 0, 1);   // anterior is "up" on screen
+        break;
+    }
+    vp.camera.position.copy(dir.multiplyScalar(dist));
+    vp.camera.up.copy(up);
+    vp.camera.lookAt(0, 0, 0);
+    vp.controls.target.set(0, 0, 0);
+    vp.controls.update();
+    return;
+  }
+
+  // ── Fallback: bbox-principal-axes heuristic (no pipeline data) ──
+  const axes = ['x','y','z'];
+  axes.sort((a,b) => s[b] - s[a]);
+  const longAxis = axes[0];
+  const midAxis  = axes[1];
+  const shortAxis= axes[2];
+
+  const dir = new THREE.Vector3();
+  switch (viewName) {
+    case 'anterior':
+      dir.set(0,0,0); dir[midAxis] = 1;
+      break;
+    case 'lateral':
+      dir.set(0,0,0); dir[shortAxis] = 1;
+      break;
+    case 'superior':
+      dir.set(0,0,0); dir[longAxis] = state.headEnd || 1;
+      break;
+    case 'inferior':
+      dir.set(0,0,0); dir[longAxis] = -(state.headEnd || 1);
+      break;
+  }
+  vp.camera.position.copy(dir.multiplyScalar(dist));
+  vp.camera.up.set(0,0,0);
+  vp.camera.up[longAxis] = state.headEnd || 1;
+  if (viewName === 'superior' || viewName === 'inferior') {
+    vp.camera.up.set(0,0,0);
+    vp.camera.up[midAxis] = 1;
+  }
+  vp.camera.lookAt(0,0,0);
+  vp.controls.target.set(0,0,0);
+  vp.controls.update();
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Resize handling
+   ───────────────────────────────────────────────────────────────────── */
+function resizeViewport(vp) {
+  const rect = vp.canvas.getBoundingClientRect();
+  const w = Math.max(1, Math.floor(rect.width));
+  const h = Math.max(1, Math.floor(rect.height));
+  if (vp.renderer.domElement.width !== w || vp.renderer.domElement.height !== h) {
+    vp.renderer.setSize(w, h, false);
+    vp.camera.aspect = w / h;
+    vp.camera.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', () => { resizeViewport(vpA); resizeViewport(vpL); });
+new ResizeObserver(() => { resizeViewport(vpA); resizeViewport(vpL); }).observe(document.getElementById('viewer-area'));
+
+/* ─────────────────────────────────────────────────────────────────────
+   Render loop
+   ───────────────────────────────────────────────────────────────────── */
+function tick() {
+  resizeViewport(vpA);
+  resizeViewport(vpL);
+  vpA.controls.update();
+  vpL.controls.update();
+  vpA.renderer.render(vpA.scene, vpA.camera);
+  vpL.renderer.render(vpL.scene, vpL.camera);
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* ─────────────────────────────────────────────────────────────────────
+   View switcher (right viewport only)
+   ───────────────────────────────────────────────────────────────────── */
+document.querySelectorAll('#lateral-view-switch .seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#lateral-view-switch .seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.rightView = btn.dataset.view;
+    document.getElementById('lateral-label').textContent = state.rightView;
+    fitCameraToView(vpL, state.rightView);
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   Toggle: Show Original vs Edited
+   Both meshes' geometry pointer is swapped.
+   ───────────────────────────────────────────────────────────────────── */
+document.getElementById('btn-show-original').addEventListener('click', () => {
+  state.showingOriginal = !state.showingOriginal;
+  const g = state.showingOriginal ? state.originalGeometry : state.editedGeometry;
+  vpA.mesh.geometry = g;
+  vpL.mesh.geometry = g;
+  const btn = document.getElementById('btn-show-original');
+  btn.classList.toggle('active', state.showingOriginal);
+  btn.innerHTML = btn.innerHTML.replace(
+    /Showing (Edited|Original)/,
+    `Showing ${state.showingOriginal ? 'Original' : 'Edited'}`
+  );
+  // Visual cue: original tinted, edited neutral
+  boneMaterial.color.set(state.showingOriginal ? 0xb0c4e0 : 0xeeeae0);
+  showToast(state.showingOriginal ? 'Showing original mesh.' : 'Showing edited mesh.');
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   Wireframe toggle
+   ───────────────────────────────────────────────────────────────────── */
+document.getElementById('btn-wireframe').addEventListener('click', () => {
+  state.wireframe = !state.wireframe;
+  boneMaterial.wireframe = state.wireframe;
+});
+
+/* ── Neck cut plane controls ── */
+document.getElementById('toggle-plane-135').addEventListener('change', e => {
+  setPlaneVisibility(state.plane135Meshes, e.target.checked);
+});
+document.getElementById('btn-plane-135-up').addEventListener('click',   () => shiftPlane135(+1));
+document.getElementById('btn-plane-135-down').addEventListener('click', () => shiftPlane135(-1));
+document.getElementById('btn-plane-135-tilt-fwd').addEventListener('click',  () => tiltPlane135(-2));
+document.getElementById('btn-plane-135-tilt-back').addEventListener('click', () => tiltPlane135(+2));
+document.getElementById('btn-plane-135-reset').addEventListener('click', resetPlane135);
+
+document.getElementById('btn-reset-cameras').addEventListener('click', () => {
+  if (state.medularMode) toggleMedular();   // also exit medular mode
+  fitCameraToView(vpA, 'anterior');
+  fitCameraToView(vpL, state.rightView);
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   MEDULAR — two complementary cross-sections:
+   • Right viewport: AXIAL cut at mid-shaft (perpendicular to long axis,
+     head half clipped). Reveals the canal looking down its length.
+   • Left  viewport: LONGITUDINAL cut (coronal plane containing the long
+     axis, perpendicular to the mid axis = the anterior viewing axis).
+     The anterior half closer to the camera is clipped, so the surgeon
+     sees the canal running top-to-bottom inside the bone like a textbook
+     diagram.
+   Both planes pass through the origin (mesh is centered there).
+   ───────────────────────────────────────────────────────────────────── */
+vpA.renderer.localClippingEnabled = true;
+vpL.renderer.localClippingEnabled = true;
+let medularPlaneAxial = null;       // for right viewport
+let medularPlaneLongitudinal = null; // for left viewport
+
+function buildMedularPlanes() {
+  // ── Axial plane: perpendicular to long axis, clips the head half ──
+  const nA = new THREE.Vector3();
+  nA[state.longAxis] = state.headEnd;
+  // Three.js convention: fragments with (normal · x + constant) < 0 are clipped.
+  // To clip the head half (coord * headEnd > 0), normal must oppose headEnd.
+  nA.multiplyScalar(-1);
+  medularPlaneAxial = new THREE.Plane(nA, 0);
+
+  // ── Longitudinal plane: contains long & short axes, perpendicular to mid.
+  // The anterior viewport's camera sits on +midAxis looking toward origin.
+  // We clip the half closer to the camera (+mid side) so the canal interior
+  // becomes visible from the front. Normal points toward -mid.
+  const axesL = ['x','y','z']; axesL.sort((a,b) => state.meshSize[b] - state.meshSize[a]);
+  const midA = axesL[1];
+  const nL = new THREE.Vector3();
+  nL[midA] = -1;
+  medularPlaneLongitudinal = new THREE.Plane(nL, 0);
+}
+
+function toggleMedular() {
+  state.medularMode = !state.medularMode;
+  const btn = document.getElementById('btn-medular');
+  btn.classList.toggle('active', state.medularMode);
+  document.getElementById('lateral-label').textContent =
+    state.medularMode ? 'medullary · axial' : state.rightView;
+  // Update the anterior viewport label too
+  const antLabel = document.querySelector('#vp-anterior .viewport-label');
+  if (antLabel) antLabel.textContent =
+    state.medularMode ? 'anterior · longitudinal' : 'anterior';
+  // Disable the right-view segmented control visually while medular is on
+  document.querySelectorAll('#lateral-view-switch .seg-btn').forEach(b => {
+    b.disabled = state.medularMode;
+    b.style.opacity = state.medularMode ? '0.4' : '1';
+  });
+
+  // Auto-toggle wireframe — easier to see the canal lumen this way.
+  // Remember the user's pre-medular wireframe state so we can restore it on exit.
+  if (state.medularMode) {
+    state._wireframeBeforeMedular = state.wireframe;
+    state.wireframe = true;
+    boneMaterial.wireframe = true;
+  } else {
+    state.wireframe = !!state._wireframeBeforeMedular;
+    boneMaterial.wireframe = state.wireframe;
+  }
+
+  if (state.medularMode) {
+    if (!state.bbox) { state.medularMode = false; return; }
+    buildMedularPlanes();
+    vpA.renderer.clippingPlanes = [medularPlaneLongitudinal];
+    vpL.renderer.clippingPlanes = [medularPlaneAxial];
+
+    // Right camera: at the head side, looking down the long axis toward the cut.
+    const dist = state.meshSize[state.longAxis] * 0.85;
+    const pos = new THREE.Vector3();
+    pos[state.longAxis] = state.headEnd * dist;
+    vpL.camera.position.copy(pos);
+    const axesL = ['x','y','z']; axesL.sort((a,b) => state.meshSize[b] - state.meshSize[a]);
+    const midA = axesL[1];
+    vpL.camera.up.set(0,0,0); vpL.camera.up[midA] = 1;
+    vpL.camera.lookAt(0,0,0);
+    vpL.controls.target.set(0,0,0);
+    vpL.controls.update();
+
+    // Left camera: keep anterior view — the cut surface naturally faces the camera.
+    fitCameraToView(vpA, 'anterior');
+
+    showToast('Medullary cuts: longitudinal (anterior) + axial (mid-shaft).');
+  } else {
+    vpA.renderer.clippingPlanes = [];
+    vpL.renderer.clippingPlanes = [];
+    fitCameraToView(vpL, state.rightView);
+    fitCameraToView(vpA, 'anterior');
+  }
+}
+document.getElementById('btn-medular').addEventListener('click', toggleMedular);
+
+/* ─────────────────────────────────────────────────────────────────────
+   LASSO TOOL — Remove Osteophytes
+   Captures a polygon in screen space of whichever viewport the user
+   started dragging on. On release, projects every triangle centroid
+   to screen space and removes those inside the polygon.
+   ───────────────────────────────────────────────────────────────────── */
+const btnLasso = document.getElementById('btn-lasso');
+const modeBanner = document.getElementById('mode-banner');
+
+btnLasso.addEventListener('click', () => {
+  state.lassoMode = !state.lassoMode;
+  btnLasso.classList.toggle('active', state.lassoMode);
+  const label = document.getElementById('btn-lasso-label');
+  if (state.lassoMode) {
+    // Force user to operate on the edited mesh
+    if (state.showingOriginal) {
+      document.getElementById('btn-show-original').click();
+    }
+    if (state.measureMode) toggleMeasureMode();
+    document.querySelector('.app').classList.add('lasso-mode');
+    showBanner('Lasso active — drag to draw a closed shape around the osteophyte');
+    label.textContent = 'Lasso Active — press Esc to exit';
+    // Disable orbit while lassoing
+    vpA.controls.enabled = false;
+    vpL.controls.enabled = false;
+  } else {
+    document.querySelector('.app').classList.remove('lasso-mode');
+    hideBanner();
+    label.textContent = 'Remove Osteophytes';
+    vpA.controls.enabled = true;
+    vpL.controls.enabled = true;
+    clearLassoOverlay();
+    clearHighlight();
+    state.lassoPoints = [];
+    state.lassoActiveVp = null;
+    cachedCentroids2D = null;
+  }
+});
+
+function showBanner(text) {
+  modeBanner.textContent = text;
+  modeBanner.style.display = 'block';
+}
+function hideBanner() { modeBanner.style.display = 'none'; }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Highlight mesh — paints the triangles currently inside the lasso so
+   the surgeon sees EXACTLY what will be resected before releasing.
+   Shared geometry between the two scenes (instance shows in both vps).
+   ───────────────────────────────────────────────────────────────────── */
+let highlightMeshA = null;
+let highlightMeshL = null;
+let cachedCentroids2D = null;       // Float32Array [x0,y0,x1,y1,...] in screen px
+let cachedTriCount = 0;
+let highlightRafPending = false;
+
+function projectAllCentroids(vp) {
+  const positions = state.editedGeometry.attributes.position.array;
+  const triCount = positions.length / 9;
+  cachedTriCount = triCount;
+  cachedCentroids2D = new Float32Array(triCount * 2);
+
+  vpA.mesh.updateMatrixWorld(true);
+  vp.camera.updateMatrixWorld();
+  const meshMatrix = vpA.mesh.matrixWorld;
+  const viewProj = new THREE.Matrix4().multiplyMatrices(
+    vp.camera.projectionMatrix,
+    vp.camera.matrixWorldInverse
+  );
+  const m = new THREE.Matrix4().multiplyMatrices(viewProj, meshMatrix);
+
+  const rect = vp.canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  const c = new THREE.Vector3();
+  for (let t = 0; t < triCount; t++) {
+    const b = t * 9;
+    c.set(
+      (positions[b]   + positions[b+3] + positions[b+6]) / 3,
+      (positions[b+1] + positions[b+4] + positions[b+7]) / 3,
+      (positions[b+2] + positions[b+5] + positions[b+8]) / 3
+    ).applyMatrix4(m);
+    cachedCentroids2D[t*2]     = ( c.x * 0.5 + 0.5) * w;
+    cachedCentroids2D[t*2 + 1] = (-c.y * 0.5 + 0.5) * h;
+  }
+}
+
+function refreshHighlight() {
+  if (highlightRafPending) return;
+  highlightRafPending = true;
+  requestAnimationFrame(() => {
+    highlightRafPending = false;
+    if (!state.lassoMode || !cachedCentroids2D || state.lassoPoints.length < 3) {
+      clearHighlight();
+      return;
+    }
+    const poly = state.lassoPoints;
+    let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+    for (const p of poly) {
+      if (p.x<minX) minX=p.x; if (p.x>maxX) maxX=p.x;
+      if (p.y<minY) minY=p.y; if (p.y>maxY) maxY=p.y;
+    }
+    const positions = state.editedGeometry.attributes.position.array;
+    // Collect inside triangle positions into a Float32Array
+    const tmp = new Float32Array(cachedTriCount * 9);
+    let kw = 0;
+    for (let t = 0; t < cachedTriCount; t++) {
+      const sx = cachedCentroids2D[t*2];
+      const sy = cachedCentroids2D[t*2 + 1];
+      if (sx<minX||sx>maxX||sy<minY||sy>maxY) continue;
+      if (!pointInPolygon(sx, sy, poly)) continue;
+      const b = t * 9;
+      for (let k = 0; k < 9; k++) tmp[kw + k] = positions[b + k];
+      kw += 9;
+    }
+    rebuildHighlightMesh(kw ? tmp.slice(0, kw) : null);
+  });
+}
+
+function rebuildHighlightMesh(positionsArr) {
+  clearHighlight();
+  if (!positionsArr || !positionsArr.length) return;
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(positionsArr, 3));
+  geom.computeVertexNormals();
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xff3344,
+    transparent: true,
+    opacity: 0.78,
+    side: THREE.DoubleSide,
+    depthTest: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  highlightMeshA = new THREE.Mesh(geom, mat);
+  highlightMeshL = new THREE.Mesh(geom, mat);
+  highlightMeshA.renderOrder = 5;
+  highlightMeshL.renderOrder = 5;
+  vpA.scene.add(highlightMeshA);
+  vpL.scene.add(highlightMeshL);
+}
+
+function clearHighlight() {
+  const g = highlightMeshA?.geometry || highlightMeshL?.geometry;
+  const m = highlightMeshA?.material || highlightMeshL?.material;
+  if (highlightMeshA) vpA.scene.remove(highlightMeshA);
+  if (highlightMeshL) vpL.scene.remove(highlightMeshL);
+  if (g) g.dispose();
+  if (m) m.dispose();
+  highlightMeshA = null;
+  highlightMeshL = null;
+}
+
+// Attach lasso pointer handlers to each viewport
+['anterior','lateral'].forEach(vpName => {
+  const vp = VIEWPORTS[vpName];
+  const overlay = document.getElementById('lasso-' + vpName);
+  vp.canvas.addEventListener('pointerdown', (e) => {
+    if (!state.lassoMode) return;
+    e.preventDefault();
+    state.lassoActiveVp = vpName;
+    state.lassoPoints = [getLocalPoint(e, vp.canvas)];
+    vp.canvas.setPointerCapture(e.pointerId);
+    drawLasso(overlay, state.lassoPoints, false);
+    // Pre-project all centroids ONCE per drag (camera is locked) — fast highlight
+    projectAllCentroids(vp);
+  });
+  vp.canvas.addEventListener('pointermove', (e) => {
+    if (!state.lassoMode || state.lassoActiveVp !== vpName) return;
+    state.lassoPoints.push(getLocalPoint(e, vp.canvas));
+    drawLasso(overlay, state.lassoPoints, false);
+    refreshHighlight();
+  });
+  vp.canvas.addEventListener('pointerup', (e) => {
+    if (!state.lassoMode || state.lassoActiveVp !== vpName) return;
+    if (state.lassoPoints.length >= 4) {
+      drawLasso(overlay, state.lassoPoints, true);
+      const removed = removeTrianglesInsideLasso(vp, state.lassoPoints);
+      showToast(removed > 0 ? `Removed ${removed.toLocaleString()} triangles.` : 'No triangles inside lasso.');
+    }
+    state.lassoPoints = [];
+    state.lassoActiveVp = null;
+    cachedCentroids2D = null;
+    clearLassoOverlay();
+    clearHighlight();
+  });
+});
+
+function getLocalPoint(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+function drawLasso(svg, pts, closed) {
+  if (pts.length < 2) { svg.innerHTML = ''; return; }
+  const ns = 'http://www.w3.org/2000/svg';
+  const tag = closed ? 'polygon' : 'polyline';
+  svg.innerHTML = '';
+  const el = document.createElementNS(ns, tag);
+  el.setAttribute('points', pts.map(p => `${p.x},${p.y}`).join(' '));
+  svg.appendChild(el);
+}
+function clearLassoOverlay() {
+  document.getElementById('lasso-anterior').innerHTML = '';
+  document.getElementById('lasso-lateral').innerHTML = '';
+}
+
+/* Point-in-polygon (ray casting) */
+function pointInPolygon(px, py, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    const intersect = ((yi > py) !== (yj > py)) &&
+                      (px < (xj - xi) * (py - yi) / (yj - yi + 1e-12) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/* The core removal routine.
+   For each triangle in editedGeometry, compute the centroid in world
+   space, project it via the chosen viewport's camera to screen pixels,
+   and check against the lasso polygon. Mark and rebuild positions. */
+function removeTrianglesInsideLasso(vp, polygon) {
+  if (!state.editedGeometry) return 0;
+  const positions = state.editedGeometry.attributes.position.array;
+  const triCount = positions.length / 9;       // 9 floats per triangle (3 verts × xyz)
+
+  // Snapshot before mutation (for undo). Stash the cumulative-removed length
+  // alongside positions so we can revert that too.
+  const snapshot = new Float32Array(positions);
+  snapshot._removedLength = state.removedTriangles.length;
+  state.undoStack.push(snapshot);
+  if (state.undoStack.length > 50) state.undoStack.shift();   // cap memory
+
+  const rect = vp.canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+
+  // Build matrices once
+  vp.camera.updateMatrixWorld();
+  const viewProj = new THREE.Matrix4().multiplyMatrices(
+    vp.camera.projectionMatrix,
+    vp.camera.matrixWorldInverse
+  );
+  const meshMatrix = vpA.mesh.matrixWorld;   // both share the same matrix (mesh sits at origin)
+  vpA.mesh.updateMatrixWorld(true);
+
+  const c = new THREE.Vector3();
+  const keep = new Float32Array(positions.length);    // worst case: same length
+  let kIdx = 0;
+  let removedCount = 0;
+  const removedThisOp = [];   // 9 floats per removed triangle
+
+  // Pre-compute bbox for polygon to short-circuit
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of polygon) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  for (let t = 0; t < triCount; t++) {
+    const base = t * 9;
+    // centroid
+    const cx = (positions[base + 0] + positions[base + 3] + positions[base + 6]) / 3;
+    const cy = (positions[base + 1] + positions[base + 4] + positions[base + 7]) / 3;
+    const cz = (positions[base + 2] + positions[base + 5] + positions[base + 8]) / 3;
+    c.set(cx, cy, cz).applyMatrix4(meshMatrix).applyMatrix4(viewProj);
+
+    // NDC → screen
+    const sx = ( c.x * 0.5 + 0.5) * w;
+    const sy = (-c.y * 0.5 + 0.5) * h;
+
+    let inside = false;
+    if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY) {
+      // also require triangle to be in front of camera
+      if (c.z > -1 && c.z < 1) {
+        inside = pointInPolygon(sx, sy, polygon);
+      }
+    }
+
+    if (inside) {
+      removedCount++;
+      // collect removed triangle floats for save/dashboard
+      for (let k = 0; k < 9; k++) removedThisOp.push(positions[base + k]);
+    } else {
+      // keep — copy 9 floats
+      for (let k = 0; k < 9; k++) keep[kIdx + k] = positions[base + k];
+      kIdx += 9;
+    }
+  }
+
+  if (removedCount === 0) {
+    // No change — undo wasn't needed
+    state.undoStack.pop();
+    updateMeshStats();
+    return 0;
+  }
+
+  // Replace position attribute with the trimmed array
+  const trimmed = keep.slice(0, kIdx);
+  const newAttr = new THREE.BufferAttribute(trimmed, 3);
+  state.editedGeometry.setAttribute('position', newAttr);
+  state.editedGeometry.deleteAttribute('normal');
+  state.editedGeometry.deleteAttribute('uv');
+  state.editedGeometry.computeVertexNormals();
+  state.editedGeometry.computeBoundingBox();
+  state.editedGeometry.computeBoundingSphere();
+  state.editedGeometry.attributes.position.needsUpdate = true;
+
+  // Force both meshes to re-read this geometry
+  vpA.mesh.geometry = state.editedGeometry;
+  vpL.mesh.geometry = state.editedGeometry;
+
+  // Track removed triangles for save/dashboard
+  for (const f of removedThisOp) state.removedTriangles.push(f);
+  saveHumerusEdit();
+
+  updateMeshStats();
+  document.getElementById('btn-undo').disabled = state.undoStack.length === 0;
+  return removedCount;
+}
+
+/* Undo */
+document.getElementById('btn-undo').addEventListener('click', () => {
+  if (state.undoStack.length === 0) return;
+  clearHighlight();
+  const prev = state.undoStack.pop();
+  state.editedGeometry.setAttribute('position', new THREE.BufferAttribute(prev, 3));
+  state.editedGeometry.deleteAttribute('normal');
+  state.editedGeometry.deleteAttribute('uv');
+  state.editedGeometry.computeVertexNormals();
+  state.editedGeometry.computeBoundingBox();
+  state.editedGeometry.computeBoundingSphere();
+  state.editedGeometry.attributes.position.needsUpdate = true;
+  vpA.mesh.geometry = state.editedGeometry;
+  vpL.mesh.geometry = state.editedGeometry;
+  // Revert cumulative removed triangles
+  if (typeof prev._removedLength === 'number') {
+    state.removedTriangles.length = prev._removedLength;
+  }
+  saveHumerusEdit();
+  document.getElementById('btn-undo').disabled = state.undoStack.length === 0;
+  updateMeshStats();
+  showToast('Undone.');
+});
+
+/* Reset — restore original geometry, clear undo stack */
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!state.originalGeometry) return;
+  if (!confirm('Reset to original mesh? All osteophyte removals will be lost.')) return;
+  clearHighlight();
+  state.editedGeometry.dispose();
+  state.editedGeometry = state.originalGeometry.clone();
+  state.undoStack = [];
+  state.removedTriangles = [];
+  saveHumerusEdit();
+  vpA.mesh.geometry = state.editedGeometry;
+  vpL.mesh.geometry = state.editedGeometry;
+  if (state.showingOriginal) {
+    // Snap back to "edited" view (which now equals original anyway)
+    document.getElementById('btn-show-original').click();
+  }
+  document.getElementById('btn-undo').disabled = true;
+  updateMeshStats();
+  showToast('Mesh reset to original.');
+});
+
+function updateMeshStats() { /* mesh stats UI removed; kept as a no-op for callers */ }
+
+/* ─────────────────────────────────────────────────────────────────────
+   MEASURE TOOL — click two points to measure a 3D distance
+   Mirrors test-heroui.html's tool. Works in either viewport.
+   ───────────────────────────────────────────────────────────────────── */
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let measureDragStart = null;
+
+function toggleMeasureMode() {
+  state.measureMode = !state.measureMode;
+  document.getElementById('btn-measure').classList.toggle('active', state.measureMode);
+  if (state.measureMode) {
+    if (state.lassoMode) document.getElementById('btn-lasso').click();
+    showBanner('Measure mode — click two points on the mesh');
+  } else {
+    hideBanner();
+    if (measurePendingSphere) {
+      VIEWPORTS[measurePendingVp].scene.remove(measurePendingSphere);
+      measurePendingSphere.geometry.dispose();
+      measurePendingSphere.material.dispose();
+      measurePendingSphere = null;
+      measurePendingVp = null;
+    }
+  }
+}
+document.getElementById('btn-measure').addEventListener('click', toggleMeasureMode);
+
+['anterior','lateral'].forEach(vpName => {
+  const vp = VIEWPORTS[vpName];
+  vp.canvas.addEventListener('mousedown', (e) => {
+    if (!state.measureMode) return;
+    measureDragStart = { x: e.clientX, y: e.clientY };
+  });
+  vp.canvas.addEventListener('mouseup', (e) => {
+    if (!state.measureMode || !measureDragStart) return;
+    const dx = e.clientX - measureDragStart.x;
+    const dy = e.clientY - measureDragStart.y;
+    measureDragStart = null;
+    if (Math.hypot(dx, dy) > 5) return;     // it was a drag — ignore
+    measureClick(vp, vpName, e);
+  });
+});
+
+function measureClick(vp, vpName, e) {
+  if (!vp.mesh) return;
+  const rect = vp.canvas.getBoundingClientRect();
+  ndc.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+  ndc.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+  raycaster.setFromCamera(ndc, vp.camera);
+  const hits = raycaster.intersectObject(vp.mesh, false);
+  if (!hits.length) return;
+  const p = hits[0].point.clone();
+
+  const colorIdx = (measurements.length + (measurePendingSphere ? 1 : 0)) % MEASURE_COLORS.length;
+  const color = MEASURE_COLORS[colorIdx];
+
+  if (!measurePendingSphere) {
+    measurePendingSphere = makeMeasureSphere(p, color);
+    measurePendingVp = vpName;
+    VIEWPORTS[vpName].scene.add(measurePendingSphere);
+  } else {
+    const sphereB = makeMeasureSphere(p, color);
+    VIEWPORTS[vpName].scene.add(sphereB);
+
+    // For now we keep the measurement in whichever scene the SECOND click was
+    // (the user can always see both spheres if both clicks were in same vp).
+    const sphereA = measurePendingSphere;
+    const aVp = measurePendingVp;
+    const dist = sphereA.position.distanceTo(p);
+    const line = makeMeasureLine(sphereA.position, p, color);
+    VIEWPORTS[vpName].scene.add(line);
+
+    measurements.push({
+      id: measureNextId++, vp: vpName,
+      sphereA, sphereAVp: aVp,
+      sphereB, line,
+      color, distance: dist
+    });
+    measurePendingSphere = null;
+    measurePendingVp = null;
+    updateMeasureUI();
+  }
+}
+
+function makeMeasureSphere(pos, color) {
+  const r = Math.max(0.6, state.meshSize.length() * 0.004);
+  const g = new THREE.SphereGeometry(r, 16, 16);
+  const m = new THREE.MeshBasicMaterial({ color, depthTest: false });
+  const s = new THREE.Mesh(g, m);
+  s.position.copy(pos);
+  s.renderOrder = 998;
+  return s;
+}
+function makeMeasureLine(pA, pB, color) {
+  const g = new THREE.BufferGeometry().setFromPoints([pA, pB]);
+  const m = new THREE.LineBasicMaterial({ color, depthTest: false });
+  const l = new THREE.Line(g, m);
+  l.renderOrder = 997;
+  return l;
+}
+
+function updateMeasureUI() {
+  const list = document.getElementById('measure-list');
+  list.innerHTML = '';
+  measurements.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'measure-item';
+    row.innerHTML = `
+      <span class="measure-dot" style="background:#${m.color.toString(16).padStart(6,'0')}"></span>
+      <span class="measure-label">M${m.id} <small style="color:var(--text-muted)">(${m.vp})</small></span>
+      <span class="measure-value">${m.distance.toFixed(1)} mm</span>
+      <span class="measure-delete" data-id="${m.id}">✕</span>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.measure-delete').forEach(b => {
+    b.addEventListener('click', () => removeMeasurement(+b.dataset.id));
+  });
+}
+
+function removeMeasurement(id) {
+  const idx = measurements.findIndex(m => m.id === id);
+  if (idx === -1) return;
+  const m = measurements[idx];
+  VIEWPORTS[m.sphereAVp || m.vp].scene.remove(m.sphereA);
+  VIEWPORTS[m.vp].scene.remove(m.sphereB);
+  VIEWPORTS[m.vp].scene.remove(m.line);
+  [m.sphereA, m.sphereB, m.line].forEach(o => {
+    o.geometry.dispose(); o.material.dispose();
+  });
+  measurements.splice(idx, 1);
+  updateMeasureUI();
+}
+
+document.getElementById('btn-clear-measures').addEventListener('click', () => {
+  while (measurements.length) removeMeasurement(measurements[0].id);
+  if (measurePendingSphere) {
+    VIEWPORTS[measurePendingVp].scene.remove(measurePendingSphere);
+    measurePendingSphere.geometry.dispose();
+    measurePendingSphere.material.dispose();
+    measurePendingSphere = null;
+    measurePendingVp = null;
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   AUTO-COMPUTE HUMERUS MEASUREMENTS
+   - Head radius: fit a sphere to the top ~15% of vertices along the long axis
+   - Cervico-diaphyseal angle, canal Ø, cortical: heuristic placeholders
+     (computing these accurately needs landmark-based input — left as TODO)
+   ───────────────────────────────────────────────────────────────────── */
+document.getElementById('btn-compute-measurements').addEventListener('click', () => {
+  if (!state.editedGeometry) { showToast('No mesh loaded.'); return; }
+  computeHeadRadius();
+  computeHeuristics();
+  showToast('Head radius computed. Other metrics need landmark picking — not yet implemented.');
+});
+
+function computeHeadRadius() {
+  const pos = state.editedGeometry.attributes.position.array;
+  // Determine long axis by bbox
+  const bb = state.editedGeometry.boundingBox;
+  const size = new THREE.Vector3(); bb.getSize(size);
+  const axes = ['x','y','z']; axes.sort((a,b) => size[b] - size[a]);
+  const longA = axes[0];
+  const longIdx = { x: 0, y: 1, z: 2 }[longA];
+
+  // Decide which end is "head" — pick the end with the larger transverse spread
+  // Sample 5% strips at each extreme and compare cross-section spread.
+  let minV = Infinity, maxV = -Infinity;
+  for (let i = 0; i < pos.length; i += 3) {
+    const v = pos[i + longIdx];
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+  const len = maxV - minV;
+  const sliceFrac = 0.08;
+  const sliceLen  = len * sliceFrac;
+  let lowSum = 0, lowCnt = 0, highSum = 0, highCnt = 0;
+  for (let i = 0; i < pos.length; i += 3) {
+    const v = pos[i + longIdx];
+    if (v <= minV + sliceLen) { lowSum += 1; lowCnt++; }
+    if (v >= maxV - sliceLen) { highSum += 1; highCnt++; }
+  }
+  // The head end has more verts (larger cross-section)
+  const headIsHigh = highCnt > lowCnt;
+  const cutoff = headIsHigh
+    ? maxV - (len * 0.18)
+    : minV + (len * 0.18);
+
+  // Collect head vertices
+  const hx = [], hy = [], hz = [];
+  for (let i = 0; i < pos.length; i += 3) {
+    const v = pos[i + longIdx];
+    const inHead = headIsHigh ? v >= cutoff : v <= cutoff;
+    if (inHead) {
+      hx.push(pos[i]); hy.push(pos[i+1]); hz.push(pos[i+2]);
+    }
+  }
+  if (hx.length < 100) {
+    document.getElementById('m-head-radius').textContent = '—';
+    return;
+  }
+  // Sphere fit (simple): centroid, then RMS radius
+  let cx = 0, cy = 0, cz = 0;
+  for (let i = 0; i < hx.length; i++) { cx += hx[i]; cy += hy[i]; cz += hz[i]; }
+  cx /= hx.length; cy /= hx.length; cz /= hx.length;
+  let r = 0;
+  for (let i = 0; i < hx.length; i++) {
+    const dx = hx[i] - cx, dy = hy[i] - cy, dz = hz[i] - cz;
+    r += Math.sqrt(dx*dx + dy*dy + dz*dz);
+  }
+  r /= hx.length;
+  const el = document.getElementById('m-head-radius');
+  el.classList.remove('pending');
+  el.textContent = `${r.toFixed(1)} mm`;
+}
+
+function computeHeuristics() {
+  // Honesty pass: these three measurements are NOT computed yet.
+  // We refuse to show a number that doesn't come from the actual mesh —
+  // a placeholder value next to "anatomical measurement" reads as truth.
+  // Each one will be implemented properly in a follow-up:
+  //   - CD angle:  requires landmark picking (head center + neck + shaft axes)
+  //   - canal Ø:   requires inner-surface ray-casting on the medullary lumen
+  //   - cortical:  requires inner/outer surface vertex pairing per location
+  ['m-cd-angle', 'm-canal', 'm-cortical'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '—';
+    el.classList.add('pending');
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Comments
+   ───────────────────────────────────────────────────────────────────── */
+document.getElementById('btn-add-comment').addEventListener('click', () => {
+  const input = document.getElementById('comment-input');
+  const t = input.value.trim();
+  if (!t) return;
+  state.comments.push({ ts: new Date().toLocaleTimeString(), text: t });
+  input.value = '';
+  renderComments();
+});
+function renderComments() {
+  const wrap = document.getElementById('comments-list');
+  if (!state.comments.length) { wrap.textContent = 'No comments yet.'; return; }
+  wrap.innerHTML = state.comments.map(c =>
+    `<div style="padding:6px 0;border-bottom:1px solid var(--border)"><div style="font-size:10px;color:var(--text-muted)">${c.ts}</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${escapeHtml(c.text)}</div></div>`
+  ).join('');
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Toast helper
+   ───────────────────────────────────────────────────────────────────── */
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+/* Keyboard shortcuts */
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (state.lassoMode) document.getElementById('btn-lasso').click();
+    if (state.measureMode) document.getElementById('btn-measure').click();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    document.getElementById('btn-undo').click();
+  }
+});
+
+// Expose for debugging
+window.HUMERUS = { state, vpA, vpL };
+</script>
+
+</body>
+</html>

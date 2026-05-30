@@ -1,0 +1,3662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>SchulterPlan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    /* HeroUI-inspired dark palette */
+    --bg-base: #000000;
+    --bg-surface: #18181b;
+    --bg-card: rgba(39,39,42,0.7);
+    --bg-card-hover: rgba(63,63,70,0.5);
+    --bg-glass: rgba(24,24,27,0.6);
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+
+    /* Implantcast teal as primary */
+    --primary: #17c5b0;
+    --primary-hover: #14b8a6;
+    --primary-glow: rgba(23,197,176,0.25);
+    --primary-soft: rgba(23,197,176,0.12);
+
+    /* Accent gold */
+    --accent: #f5a623;
+    --accent-soft: rgba(245,166,35,0.12);
+    --accent-glow: rgba(245,166,35,0.3);
+
+    --danger: #f31260;
+    --success: #17c964;
+    --warning: #f5a524;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+    --shadow-glow: 0 0 20px var(--primary-glow);
+
+    --blur: blur(16px);
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr 290px;
+    grid-template-rows: 60px 1fr;
+    height: 100vh;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border-bottom: 1px solid var(--border);
+    gap: 6px;
+    z-index: 20;
+  }
+
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar-logo img { height: 32px; }
+  .topbar-logo h1 {
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), #7dd3fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.3px;
+  }
+  .topbar .case-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 12px;
+    background: var(--bg-card);
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .topbar .spacer { flex: 1; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: #000;
+  }
+  .btn-primary:hover {
+    background: var(--primary-hover);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-1px);
+  }
+  .btn-flat {
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+  .btn-flat:hover {
+    background: rgba(23,197,176,0.2);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+  }
+  .btn-accent {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .btn-accent.active {
+    background: var(--accent);
+    color: #000;
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+  }
+  .btn:active { transform: scale(0.97); }
+
+  /* ── Segmented Control (views) ── */
+  .segmented {
+    display: flex;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 2px;
+    border: 1px solid var(--border);
+  }
+  .segmented .seg-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .segmented .seg-btn:hover { color: var(--text-secondary); }
+  .segmented .seg-btn.active {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .segmented .seg-btn svg { width: 18px; height: 18px; }
+  .segmented .seg-btn span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  .sidebar.right {
+    border-right: none;
+    border-left: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 20px 0 10px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg-card);
+    backdrop-filter: var(--blur);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    transition: all var(--transition);
+  }
+  .card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+
+  /* ── Measurements ── */
+  .measure-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .measure-row:last-child { border-bottom: none; }
+  .measure-row .label { font-size: 13px; color: var(--text-secondary); }
+  .measure-row .value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Implant Grid ── */
+  .implant-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .implant-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 8px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .implant-card:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--text-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+  .implant-card.selected {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow), var(--shadow-sm);
+  }
+  .implant-card .icon {
+    width: 50px;
+    height: 36px;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+    transition: color var(--transition);
+  }
+  .implant-card.selected .icon { color: var(--primary); }
+  .implant-card:hover .icon { color: var(--text-secondary); }
+
+  .implant-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 12px 0 6px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Viewer ── */
+  .viewer {
+    position: relative;
+    background: #1a1a2e;
+    overflow: hidden;
+  }
+  #viewer-canvas { display: block; width: 100%; height: 100%; }
+
+  /* Lasso overlay (SVG for drawing the freehand polygon) */
+  .lasso-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 50;
+    overflow: visible;
+  }
+  .lasso-overlay polyline,
+  .lasso-overlay polygon {
+    fill: rgba(250,204,21,0.15);
+    stroke: #facc15;
+    stroke-width: 2;
+    stroke-dasharray: 4 4;
+  }
+  #viewer-container.lasso-mode #viewer-canvas { cursor: crosshair; }
+  #btn-scapula-lasso.active {
+    box-shadow: 0 0 0 2px #facc15, inset 0 0 0 1px rgba(250,204,21,0.4);
+  }
+
+  .viewer-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    text-align: center;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .viewer-placeholder .bone-icon { font-size: 48px; margin-bottom: 8px; }
+  .viewer-placeholder .sub { font-size: 11px; }
+
+  /* ── Control Buttons ── */
+  .control-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 6px;
+  }
+  .ctrl-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .ctrl-btn:hover {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .ctrl-btn:active { transform: scale(0.9); }
+
+  .ctrl-label {
+    text-align: center;
+  }
+  .ctrl-label .value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .ctrl-label .name {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* ── Arrow Pad ── */
+  .arrow-pad {
+    display: grid;
+    grid-template-columns: 36px 36px 36px;
+    grid-template-rows: 36px 36px 36px;
+    gap: 4px;
+    justify-content: center;
+    margin: 14px auto;
+  }
+  .arrow-pad .empty { visibility: hidden; }
+
+  /* ── Scenarios ── */
+  .scenario-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .scenario-btn {
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .scenario-btn:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+  .scenario-btn.has-data {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+
+  /* ── Input / Textarea ── */
+  .input, textarea.input {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    transition: all var(--transition);
+    outline: none;
+    resize: vertical;
+  }
+  .input:focus, textarea.input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+  .input::placeholder { color: var(--text-muted); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur);
+    color: var(--text-primary);
+    padding: 12px 24px;
+    border-radius: var(--radius-xl);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Credits ── */
+  .credits {
+    position: fixed;
+    bottom: 10px;
+    right: 16px;
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.4;
+    pointer-events: none;
+    text-align: right;
+    line-height: 1.4;
+    z-index: 10;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* ── Footer actions ── */
+  .actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  /* ── Bone Contact ── */
+  .contact-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+  #contact-map {
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+  }
+  .contact-pct {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .contact-pct .pct-symbol { font-size: 18px; font-weight: 500; color: var(--text-secondary); }
+  .contact-pct .info-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--text-muted); color: var(--text-muted);
+    font-size: 11px; font-weight: 600; cursor: help;
+    vertical-align: middle; margin-left: 6px;
+    position: relative;
+  }
+  .contact-pct .info-icon:hover::after {
+    content: 'Percentage of implant back-plate area in contact with bone (< 2mm gap)';
+    position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+    background: var(--bg-card); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 400;
+    color: var(--text-secondary); white-space: nowrap; z-index: 100;
+    box-shadow: var(--shadow-md);
+  }
+  .contact-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .contact-computing {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* ── Measurements ── */
+  .measure-tool-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .measure-tool-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .measure-tool-header .btn { flex: 0 0 auto; }
+  #measure-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .measure-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    font-size: 12px;
+  }
+  .measure-item .measure-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .measure-item .measure-label {
+    flex: 1;
+    color: var(--text-secondary);
+  }
+  .measure-item .measure-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'Inter', monospace;
+  }
+  .measure-item .measure-delete {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 0 2px;
+  }
+  .measure-item .measure-delete:hover { color: var(--danger); }
+  .measure-hint {
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+    padding: 4px 0;
+    animation: pulse-hint 1.5s infinite;
+  }
+  @keyframes pulse-hint {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ── Cut Views ── */
+  .cut-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+  .cut-controls .cut-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .cut-controls .cut-btn:hover { color: var(--text-secondary); }
+  .cut-controls .cut-btn.active {
+    background: var(--danger);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(243,18,96,0.3);
+  }
+
+  /* ── Voice recording ── */
+  .voice-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .btn-mic {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    flex-shrink: 0;
+  }
+  .btn-mic:hover { border-color: var(--border-hover); color: var(--text-primary); }
+  .btn-mic.recording {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+    animation: pulse-rec 1s infinite;
+    box-shadow: 0 0 12px rgba(243,18,96,0.4);
+  }
+  @keyframes pulse-rec {
+    0%, 100% { box-shadow: 0 0 12px rgba(243,18,96,0.4); }
+    50% { box-shadow: 0 0 20px rgba(243,18,96,0.6); }
+  }
+  .lang-toggle {
+    display: inline-flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .lang-toggle button {
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition);
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .lang-toggle button.active {
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+  .lang-toggle button:hover:not(.active) { color: var(--text-secondary); }
+  .voice-status {
+    font-size: 10px;
+    color: var(--text-muted);
+    flex: 1;
+    text-align: right;
+  }
+  .voice-status.recording { color: var(--danger); }
+
+  .comment-item {
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    position: relative;
+  }
+  .comment-item .comment-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .comment-item .comment-delete {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .comment-item:hover .comment-delete { opacity: 1; }
+  .comment-item .comment-delete:hover { color: var(--danger); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    body { overflow: auto; }
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+    }
+    .topbar { flex-wrap: wrap; height: auto; padding: 10px 14px; gap: 8px; }
+    .viewer { height: 50vw; min-height: 240px; max-height: 360px; }
+    .sidebar { border: none !important; border-top: 1px solid var(--border) !important; }
+    .sidebar.right { order: 2; }
+    .sidebar.left { order: 3; }
+    .implant-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hidden file input for folder import -->
+<input type="file" id="folder-import" webkitdirectory directory multiple style="display:none" />
+
+<div class="app">
+  <!-- ── TOPBAR ── -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <img src="data/logo_implantcast.png" alt="ic"/>
+      <h1>SchulterPlan</h1>
+    </div>
+    <span class="case-info" id="case-info">No case loaded</span>
+    <a href="surgery-dashboard.html" class="btn btn-flat btn-sm" style="text-decoration:none;padding:4px 8px" title="Surgery Dashboard">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="9"/>
+        <rect x="14" y="3" width="7" height="5"/>
+        <rect x="14" y="12" width="7" height="9"/>
+        <rect x="3" y="16" width="7" height="5"/>
+      </svg>
+      Dashboard
+    </a>
+    <a href="humerus.html" class="btn btn-flat btn-sm" style="text-decoration:none;padding:4px 8px" title="Humerus planning">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="5" r="3"/>
+        <path d="M12 8v13"/>
+        <path d="M10 21h4"/>
+      </svg>
+      Humerus
+    </a>
+    <div class="spacer"></div>
+
+    <div class="segmented">
+      <button class="seg-btn" id="view-anterior" onclick="window.GPS.setView('anterior')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L8 6v6l-2 2v6l4-2 2 2 2-2 4 2v-6l-2-2V6l-4-4z"/></svg>
+        <span>anterior</span>
+      </button>
+      <button class="seg-btn active" id="view-glenoid" onclick="window.GPS.setView('glenoid')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="12" rx="6" ry="9"/></svg>
+        <span>glenoid</span>
+      </button>
+      <button class="seg-btn" id="view-lateral" onclick="window.GPS.setView('lateral')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2v6l-3 3v6l3 5h-4l-2-5v-6l2-3V2z"/></svg>
+        <span>lateral</span>
+      </button>
+      <button class="seg-btn" id="view-inferior" onclick="window.GPS.setView('inferior')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22l-4-4h3V10H8l4-4 4 4h-3v8h3z"/></svg>
+        <span>inferior</span>
+      </button>
+    </div>
+
+    <button class="btn btn-accent btn-sm active" id="toggle-implant">Implant</button>
+    <button class="btn btn-ghost btn-sm" id="toggle-transparent">Transp.</button>
+    <button class="btn btn-ghost btn-sm" id="toggle-centerline">C.Line</button>
+    <button class="btn btn-ghost btn-sm" id="btn-cut-view">Cut</button>
+    <div class="cut-controls" id="cut-controls" style="display:none">
+      <button class="cut-btn" data-cut="axial">Ax</button>
+      <button class="cut-btn" data-cut="coronal">Cor</button>
+      <button class="cut-btn" data-cut="sagittal">Sag</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="btn-auto-measure">Measure</button>
+    <button class="btn btn-primary btn-sm" id="btn-import-folder">Import</button>
+  </div>
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <div class="sidebar left">
+    <div class="section-label">Pre-Op Measurements</div>
+    <div class="card">
+      <div class="measure-row">
+        <span class="label">Retroversion</span>
+        <span class="value" id="m-retro">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Inferior Incl.</span>
+        <span class="value" id="m-incl">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">PSI</span>
+        <span class="value" id="m-sublux">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Head Radius</span>
+        <span class="value" id="m-head-radius">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Neck-Shaft ∠</span>
+        <span class="value" id="m-nsa">—</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Head Diameter</span>
+        <span class="value" id="m-head-diam">—</span>
+      </div>
+    </div>
+
+    <div class="section-label">Implant Selection</div>
+    <div class="implant-group-label">Glenoid Cementless Anatomical</div>
+    <div class="implant-grid">
+      <!-- Anatomical 2 Short -->
+      <div class="implant-card selected" data-implant="ANAT_2_SHORT">
+        <div class="icon">
+          <svg viewBox="0 0 70 52" fill="currentColor" style="width:100%;height:100%">
+            <rect x="2" y="4" width="10" height="44" rx="3" fill="currentColor" opacity="0.8"/>
+            <rect x="2" y="4" width="3" height="44" rx="1.5" fill="currentColor" opacity="0.35"/>
+            <circle cx="14" cy="16" r="2.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="14" cy="26" r="2.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="14" cy="36" r="2.5" fill="currentColor" opacity="0.5"/>
+            <rect x="14" y="16" width="34" height="20" rx="2" fill="currentColor" opacity="0.85"/>
+            <path d="M48,16 Q52,26 48,36" fill="currentColor" opacity="0.6"/>
+            <circle cx="24" cy="26" r="2.5" fill="white" opacity="0.55"/>
+            <circle cx="24" cy="26" r="1.5" fill="currentColor" opacity="0.3"/>
+            <circle cx="33" cy="26" r="2.3" fill="white" opacity="0.5"/>
+            <circle cx="33" cy="26" r="1.3" fill="currentColor" opacity="0.25"/>
+            <circle cx="42" cy="26" r="2" fill="white" opacity="0.4"/>
+            <circle cx="42" cy="26" r="1.1" fill="currentColor" opacity="0.2"/>
+          </svg>
+        </div>
+        <span>Size 2</span><span>Short</span>
+      </div>
+      <!-- Anatomical 2 Long -->
+      <div class="implant-card" data-implant="ANAT_2_LONG">
+        <div class="icon">
+          <svg viewBox="0 0 70 56" fill="currentColor" style="width:100%;height:100%">
+            <rect x="2" y="4" width="10" height="44" rx="3" fill="currentColor" opacity="0.8"/>
+            <rect x="2" y="4" width="3" height="44" rx="1.5" fill="currentColor" opacity="0.35"/>
+            <circle cx="14" cy="16" r="2.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="14" cy="26" r="2.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="14" cy="36" r="2.5" fill="currentColor" opacity="0.5"/>
+            <rect x="14" y="16" width="46" height="20" rx="2" fill="currentColor" opacity="0.85"/>
+            <path d="M60,16 Q64,26 60,36" fill="currentColor" opacity="0.6"/>
+            <circle cx="22" cy="26" r="2.3" fill="white" opacity="0.55"/>
+            <circle cx="22" cy="26" r="1.3" fill="currentColor" opacity="0.3"/>
+            <circle cx="31" cy="26" r="2.2" fill="white" opacity="0.5"/>
+            <circle cx="31" cy="26" r="1.2" fill="currentColor" opacity="0.25"/>
+            <circle cx="40" cy="26" r="2" fill="white" opacity="0.45"/>
+            <circle cx="40" cy="26" r="1.1" fill="currentColor" opacity="0.22"/>
+            <circle cx="49" cy="26" r="1.8" fill="white" opacity="0.38"/>
+            <circle cx="49" cy="26" r="1" fill="currentColor" opacity="0.18"/>
+          </svg>
+        </div>
+        <span>Size 2</span><span>Long</span>
+      </div>
+      <!-- Anatomical 3 Short -->
+      <div class="implant-card" data-implant="ANAT_3_SHORT">
+        <div class="icon">
+          <svg viewBox="0 0 70 52" fill="currentColor" style="width:100%;height:100%">
+            <rect x="2" y="2" width="11" height="52" rx="3" fill="currentColor" opacity="0.8"/>
+            <rect x="2" y="2" width="3.5" height="52" rx="1.5" fill="currentColor" opacity="0.35"/>
+            <circle cx="15" cy="17" r="2.8" fill="currentColor" opacity="0.5"/>
+            <circle cx="15" cy="28" r="2.8" fill="currentColor" opacity="0.5"/>
+            <circle cx="15" cy="39" r="2.8" fill="currentColor" opacity="0.5"/>
+            <rect x="15" y="17" width="34" height="22" rx="2" fill="currentColor" opacity="0.85"/>
+            <path d="M49,17 Q53,28 49,39" fill="currentColor" opacity="0.6"/>
+            <circle cx="25" cy="28" r="2.6" fill="white" opacity="0.55"/>
+            <circle cx="25" cy="28" r="1.5" fill="currentColor" opacity="0.3"/>
+            <circle cx="34" cy="28" r="2.4" fill="white" opacity="0.5"/>
+            <circle cx="34" cy="28" r="1.4" fill="currentColor" opacity="0.25"/>
+            <circle cx="43" cy="28" r="2.1" fill="white" opacity="0.4"/>
+            <circle cx="43" cy="28" r="1.2" fill="currentColor" opacity="0.2"/>
+          </svg>
+        </div>
+        <span>Size 3</span><span>Short</span>
+      </div>
+      <!-- Anatomical 3 Long -->
+      <div class="implant-card" data-implant="ANAT_3_LONG">
+        <div class="icon">
+          <svg viewBox="0 0 70 56" fill="currentColor" style="width:100%;height:100%">
+            <rect x="2" y="2" width="11" height="52" rx="3" fill="currentColor" opacity="0.8"/>
+            <rect x="2" y="2" width="3.5" height="52" rx="1.5" fill="currentColor" opacity="0.35"/>
+            <circle cx="15" cy="17" r="2.8" fill="currentColor" opacity="0.5"/>
+            <circle cx="15" cy="28" r="2.8" fill="currentColor" opacity="0.5"/>
+            <circle cx="15" cy="39" r="2.8" fill="currentColor" opacity="0.5"/>
+            <rect x="15" y="17" width="46" height="22" rx="2" fill="currentColor" opacity="0.85"/>
+            <path d="M61,17 Q65,28 61,39" fill="currentColor" opacity="0.6"/>
+            <circle cx="23" cy="28" r="2.5" fill="white" opacity="0.55"/>
+            <circle cx="23" cy="28" r="1.4" fill="currentColor" opacity="0.3"/>
+            <circle cx="32" cy="28" r="2.3" fill="white" opacity="0.5"/>
+            <circle cx="32" cy="28" r="1.3" fill="currentColor" opacity="0.25"/>
+            <circle cx="41" cy="28" r="2.1" fill="white" opacity="0.45"/>
+            <circle cx="41" cy="28" r="1.2" fill="currentColor" opacity="0.22"/>
+            <circle cx="50" cy="28" r="1.9" fill="white" opacity="0.38"/>
+            <circle cx="50" cy="28" r="1" fill="currentColor" opacity="0.18"/>
+          </svg>
+        </div>
+        <span>Size 3</span><span>Long</span>
+      </div>
+    </div>
+
+    <div class="implant-group-label">Glenoid Cementless Round</div>
+    <div class="implant-grid">
+      <!-- Round 3 -->
+      <div class="implant-card" data-implant="ROUND_3">
+        <div class="icon">
+          <svg viewBox="0 0 56 56" fill="currentColor" style="width:100%;height:100%">
+            <circle cx="28" cy="28" r="26" fill="currentColor" opacity="0.3"/>
+            <circle cx="28" cy="28" r="23" fill="currentColor" opacity="0.7"/>
+            <circle cx="28" cy="28" r="4.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="28" cy="28" r="3" fill="white" opacity="0.4"/>
+            <circle cx="28" cy="28" r="1.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="28" cy="12" r="3.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="28" cy="12" r="2.2" fill="white" opacity="0.6"/>
+            <circle cx="12" cy="28" r="3.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="12" cy="28" r="2.2" fill="white" opacity="0.6"/>
+            <circle cx="44" cy="28" r="3.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="44" cy="28" r="2.2" fill="white" opacity="0.6"/>
+            <circle cx="28" cy="44" r="3.5" fill="currentColor" opacity="0.5"/>
+            <circle cx="28" cy="44" r="2.2" fill="white" opacity="0.6"/>
+          </svg>
+        </div>
+        <span>Size 3</span><span>Round</span>
+      </div>
+      <!-- Tech Import -->
+      <div class="implant-card" data-implant="TECHIMPORT">
+        <div class="icon">
+          <svg viewBox="0 0 56 56" fill="currentColor" style="width:100%;height:100%">
+            <circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.4"/>
+            <path d="M28,16 L28,36 M22,30 L28,36 L34,30" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+            <line x1="18" y1="40" x2="38" y2="40" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+        </div>
+        <span>Tech</span><span>Import</span>
+      </div>
+    </div>
+
+    <div class="section-label">Saved Scenarios</div>
+    <div class="scenario-list" id="scenarios">
+      <button class="scenario-btn" data-slot="0">Scenario 1: empty</button>
+      <button class="scenario-btn" data-slot="1">Scenario 2: empty</button>
+      <button class="scenario-btn" data-slot="2">Scenario 3: empty</button>
+    </div>
+
+    <div class="actions-stack">
+      <button class="btn btn-primary" style="width:100%" id="btn-save-current">Save Current Scenario</button>
+      <button class="btn btn-ghost" style="width:100%" id="btn-save-server">Save to Server</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button class="btn btn-ghost btn-sm" id="btn-export-ini">Export .ini</button>
+        <button class="btn btn-ghost btn-sm" id="btn-share">Share</button>
+      </div>
+    </div>
+
+    <div class="section-label">Osteophyte Removal</div>
+    <div class="actions-stack">
+      <button class="btn btn-accent" style="width:100%" id="btn-scapula-lasso">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">
+          <path d="M3 12c0-5 4-9 9-9s9 4 9 9c0 3-2 5-5 5s-3-3-7-3-3 4-6 4z"/>
+        </svg>
+        <span id="btn-scapula-lasso-label">Remove Osteophytes</span>
+      </button>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.4">
+        Click to activate, then draw a closed shape around the bone you want to remove.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button class="btn btn-ghost btn-sm" id="btn-scapula-undo" disabled>Undo</button>
+        <button class="btn btn-ghost btn-sm" id="btn-scapula-reset">Reset</button>
+      </div>
+      <div id="scapula-mesh-stats" style="font-size:11px;color:var(--text-muted)">—</div>
+    </div>
+  </div>
+
+  <!-- ── 3D VIEWER ── -->
+  <div class="viewer" id="viewer-container">
+    <canvas id="viewer-canvas"></canvas>
+    <svg class="lasso-overlay" id="scapula-lasso-svg" preserveAspectRatio="none"></svg>
+    <div class="viewer-placeholder" id="viewer-placeholder">
+      <div class="bone-icon">&#x1f9b4;</div>
+      3D Viewer<br/>
+      <span class="sub">Import a case to begin</span>
+    </div>
+  </div>
+
+  <!-- ── RIGHT SIDEBAR ── -->
+  <div class="sidebar right">
+    <div class="section-label">Implant Position</div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" data-axis="retroversion" data-delta="-1">←</button>
+      <div class="ctrl-label">
+        <div class="name">Retroversion</div>
+        <div class="value" id="v-retro">0.0°</div>
+      </div>
+      <button class="ctrl-btn" data-axis="retroversion" data-delta="1">→</button>
+    </div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" data-axis="inclination" data-delta="-1">↓</button>
+      <div class="ctrl-label">
+        <div class="name">Inferior Incl.</div>
+        <div class="value" id="v-incl">0.0°</div>
+      </div>
+      <button class="ctrl-btn" data-axis="inclination" data-delta="1">↑</button>
+    </div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" data-axis="depth" data-delta="-1">−</button>
+      <div class="ctrl-label">
+        <div class="name">Depth</div>
+        <div class="value" id="v-depth">0mm</div>
+      </div>
+      <button class="ctrl-btn" data-axis="depth" data-delta="1">+</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Translation</div>
+
+    <div class="arrow-pad">
+      <div class="empty"></div>
+      <button class="ctrl-btn" data-axis="ty" data-delta="1">↑</button>
+      <div class="empty"></div>
+      <button class="ctrl-btn" data-axis="tx" data-delta="-1">←</button>
+      <div class="empty"></div>
+      <button class="ctrl-btn" data-axis="tx" data-delta="1">→</button>
+      <button class="ctrl-btn" data-axis="rotz" data-delta="-1">↺</button>
+      <button class="ctrl-btn" data-axis="ty" data-delta="-1">↓</button>
+      <button class="ctrl-btn" data-axis="rotz" data-delta="1">↻</button>
+    </div>
+
+    <div class="card" style="padding:10px 14px">
+      <div class="measure-row">
+        <span class="label">SI (Y)</span>
+        <span class="value" id="v-ty">0mm</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">AP (X)</span>
+        <span class="value" id="v-tx">0mm</span>
+      </div>
+      <div class="measure-row">
+        <span class="label">Axial Rot.</span>
+        <span class="value" id="v-rotz">0°</span>
+      </div>
+    </div>
+
+    <div class="actions-stack" style="margin-top:12px">
+      <button class="btn btn-ghost" style="width:100%" id="btn-reset">Reset Position</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Bone Contact</div>
+    <div class="contact-section">
+      <canvas id="contact-map" width="160" height="160"></canvas>
+      <div class="contact-pct">
+        <span id="contact-pct">—</span><span class="pct-symbol">%</span>
+        <span class="info-icon">i</span>
+      </div>
+      <div class="contact-legend">
+        <span class="legend-item"><span class="swatch" style="background:#1e78c8"></span>Embedded</span>
+        <span class="legend-item"><span class="swatch" style="background:#008232"></span>Contact</span>
+        <span class="legend-item"><span class="swatch" style="background:#17c964"></span>Near (&lt;0.5mm)</span>
+        <span class="legend-item"><span class="swatch" style="background:#3c3c41"></span>No contact</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Measurements</div>
+    <div class="measure-tool-section">
+      <div class="measure-tool-header">
+        <button class="btn btn-ghost btn-sm" id="btn-measure">📏 Measure</button>
+        <button class="btn btn-ghost btn-sm" id="btn-clear-measures" style="margin-left:auto;font-size:11px">Clear All</button>
+      </div>
+      <div id="measure-hint" style="display:none" class="measure-hint">Click two points on the 3D model</div>
+      <div id="measure-list"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Comments</div>
+    <div id="comments-list" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">No comments yet.</div>
+    <div class="voice-row">
+      <button class="btn-mic" id="btn-mic" title="Record voice comment">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+          <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </button>
+      <div class="lang-toggle" id="lang-toggle">
+        <button class="active" data-lang="pt-BR">PT</button>
+        <button data-lang="en-US">EN</button>
+      </div>
+      <span class="voice-status" id="voice-status"></span>
+    </div>
+    <textarea class="input" rows="2" placeholder="Add a comment or use mic..." id="comment-input" style="margin-bottom:6px"></textarea>
+    <button class="btn btn-flat btn-sm" style="width:100%" id="btn-add-comment">Post Comment</button>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<div class="credits">
+  SchulterPlan — implantcast<br>
+  Created by Dr. Bruno Gobbato
+</div>
+
+<!-- ── Three.js + App Logic ── -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+// ── State ──
+let cutViewActive = false;
+let activeCutPlane = null;
+let cutClipPlane = null;
+
+const state = {
+  planning: null,
+  selectedImplant: 'ANAT_2_SHORT',
+  adjust: { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 },
+  scenarios: [null, null, null],
+  showImplant: true,
+  transparent: false,
+  scapulaSources: null,
+  comments: []
+};
+
+/* ─────────────────────────────────────────────────────────────────────
+   Early-declared persistence state.
+   These MUST be declared above the init code (line ~2580) because init's
+   async flow calls saveImplantState() and restoreScapulaEdit() which read
+   from them. Declaring later would put them in a Temporal Dead Zone and
+   throw "Cannot access X before initialization".
+   ───────────────────────────────────────────────────────────────────── */
+const IMPLANT_STATE_KEY = (caseId) => `schulterplan_implant_${caseId}`;
+const SCAPULA_EDIT_KEY  = (caseId) => `schulterplan_scapula_edit_${caseId}`;
+let _implantSaveDebounce = null;
+let _scapulaSaveDebounce = null;
+const scapulaLasso = {
+  mode: false,
+  points: [],
+  removedFloats: [],
+  undoStack: [],
+  originalPositions: null,
+  drawing: false,
+};
+
+// ── Three.js setup ──
+const canvas = document.getElementById('viewer-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
+camera.position.set(200, 200, 300);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl1 = new THREE.DirectionalLight(0xffffff, 0.7);
+dl1.position.set(1, 1, 1);
+scene.add(dl1);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.3);
+dl2.position.set(-1, -1, -1);
+scene.add(dl2);
+
+let scapulaMesh = null;
+let scapulaMaterial = null;
+let scapulaBackMesh = null;
+let scapulaBackMaterial = null;
+let implantMesh = null;
+const implantCache = {};
+
+function buildScapulaBackMesh(geometry) {
+  if (scapulaBackMesh) { scene.remove(scapulaBackMesh); scapulaBackMesh.geometry.dispose(); scapulaBackMesh.material.dispose(); }
+  scapulaBackMaterial = new THREE.MeshPhongMaterial({
+    color: 0x6b5e4a, side: THREE.BackSide, clippingPlanes: []
+  });
+  scapulaBackMesh = new THREE.Mesh(geometry, scapulaBackMaterial);
+  scapulaBackMesh.visible = false;
+  scene.add(scapulaBackMesh);
+}
+
+let glenoidCenter = new THREE.Vector3();
+let glenoidNormal = new THREE.Vector3();  // surface normal (perpendicular to glenoid face)
+let glenoidUp = new THREE.Vector3();
+let glenoidRight = new THREE.Vector3();
+let friedmanAxis = new THREE.Vector3();   // Friedman direction (trigonum→center, the 0° reference)
+let viewDistance = 200;
+
+// ── Measurement tool ──
+const MEASURE_COLORS = [0x00ccff, 0xff6644, 0xffcc00, 0xcc44ff, 0x44ff88, 0xff4488];
+const measurements = []; // {id, sphereA, sphereB, line, label3d, color, distance}
+let measureMode = false;
+let measurePendingSphere = null; // first sphere waiting for second click
+let measureNextId = 1;
+
+const measureRaycaster = new THREE.Raycaster();
+const measureMouse = new THREE.Vector2();
+
+function createMeasureSphere(position, color) {
+  const geom = new THREE.SphereGeometry(1.2, 16, 16);
+  const mat = new THREE.MeshBasicMaterial({ color, depthTest: false });
+  const sphere = new THREE.Mesh(geom, mat);
+  sphere.position.copy(position);
+  sphere.renderOrder = 998;
+  scene.add(sphere);
+  return sphere;
+}
+
+function createMeasureLine(pA, pB, color) {
+  const geom = new THREE.BufferGeometry().setFromPoints([pA, pB]);
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2, depthTest: false });
+  const line = new THREE.Line(geom, mat);
+  line.renderOrder = 997;
+  scene.add(line);
+  return line;
+}
+
+function finishMeasurement(sphereA, sphereB, color, colorIndex) {
+  const dist = sphereA.position.distanceTo(sphereB.position);
+  const line = createMeasureLine(sphereA.position, sphereB.position, color);
+
+  const m = {
+    id: measureNextId++,
+    sphereA, sphereB, line,
+    color, colorIndex,
+    distance: dist
+  };
+  measurements.push(m);
+  updateMeasureUI();
+  return m;
+}
+
+function removeMeasurement(id) {
+  const idx = measurements.findIndex(m => m.id === id);
+  if (idx === -1) return;
+  const m = measurements[idx];
+  scene.remove(m.sphereA); scene.remove(m.sphereB); scene.remove(m.line);
+  m.sphereA.geometry.dispose(); m.sphereA.material.dispose();
+  m.sphereB.geometry.dispose(); m.sphereB.material.dispose();
+  m.line.geometry.dispose(); m.line.material.dispose();
+  measurements.splice(idx, 1);
+  updateMeasureUI();
+}
+
+function clearAllMeasurements() {
+  while (measurements.length) removeMeasurement(measurements[0].id);
+  if (measurePendingSphere) {
+    scene.remove(measurePendingSphere);
+    measurePendingSphere.geometry.dispose();
+    measurePendingSphere.material.dispose();
+    measurePendingSphere = null;
+  }
+  measureMode = false;
+  document.getElementById('btn-measure').classList.remove('active');
+  document.getElementById('measure-hint').style.display = 'none';
+  updateMeasureUI();
+}
+
+function updateMeasureUI() {
+  const list = document.getElementById('measure-list');
+  list.innerHTML = '';
+  measurements.forEach(m => {
+    const hex = '#' + m.color.toString(16).padStart(6, '0');
+    const div = document.createElement('div');
+    div.className = 'measure-item';
+    div.innerHTML = `
+      <span class="measure-dot" style="background:${hex}"></span>
+      <span class="measure-label">${m.label || 'M' + m.id}</span>
+      <span class="measure-value">${m.distance.toFixed(1)} mm</span>
+      <span class="measure-delete" data-id="${m.id}">&times;</span>
+    `;
+    list.appendChild(div);
+  });
+  // Wire up delete buttons
+  list.querySelectorAll('.measure-delete').forEach(btn => {
+    btn.addEventListener('click', () => removeMeasurement(parseInt(btn.dataset.id)));
+  });
+}
+
+// ── Auto Measure: implant center → inferior rim, implant center → anterior rim ──
+let autoMeasureActive = false;
+let autoMeasureData = []; // store auto-measure IDs to clear them
+
+function runAutoMeasure() {
+  // Clear previous auto-measurements
+  clearAutoMeasure();
+
+  if (!implantMesh || !scapulaMesh || !state.planning) {
+    showToast('Select an implant first');
+    return;
+  }
+
+  // Pipeline path: use anatomical landmarks (glenoid_inferior, glenoid_anterior)
+  // as the rim references. The implant centre is the reference origin
+  // (can be off-surface — no surface projection).
+  const payload = state.planning._pipelinePayload;
+  const lm = payload?.landmarks?.scapula;
+  const infLm = lm?.glenoid_inferior?.xyz_mm;
+  const antLm = lm?.glenoid_anterior?.xyz_mm;
+  if (!infLm || !antLm) {
+    showToast('Auto Measure needs pipeline glenoid_inferior + glenoid_anterior landmarks', 3500);
+    return;
+  }
+
+  // Implant center in world coords
+  implantMesh.updateMatrixWorld(true);
+  const implantCenter = new THREE.Vector3(0, 0, 0).applyMatrix4(implantMesh.matrixWorld);
+
+  // Landmarks are in raw NIfTI mm. The scapula Group has position = -rawCenter,
+  // so world-space landmark = landmark.xyz_mm + scapulaMesh.position.
+  const offset = scapulaMesh.position;
+  const infWorld = new THREE.Vector3(infLm[0], infLm[1], infLm[2]).add(offset);
+  const antWorld = new THREE.Vector3(antLm[0], antLm[1], antLm[2]).add(offset);
+
+  // INFERIOR: implant center → glenoid_inferior landmark
+  const orange = 0xff6644;
+  {
+    const sphereA = createMeasureSphere(implantCenter.clone(), orange);
+    const sphereB = createMeasureSphere(infWorld.clone(), orange);
+    const m = finishMeasurement(sphereA, sphereB, orange, 1);
+    m.label = 'Inferior';
+    autoMeasureData.push(m.id);
+    console.log(`[AutoMeasure] Inferior: ${m.distance.toFixed(1)}mm`);
+  }
+
+  // ANTERIOR: implant center → glenoid_anterior landmark
+  const cyan = 0x00ccff;
+  {
+    const sphereA = createMeasureSphere(implantCenter.clone(), cyan);
+    const sphereB = createMeasureSphere(antWorld.clone(), cyan);
+    const m = finishMeasurement(sphereA, sphereB, cyan, 0);
+    m.label = 'Anterior';
+    autoMeasureData.push(m.id);
+    console.log(`[AutoMeasure] Anterior: ${m.distance.toFixed(1)}mm`);
+  }
+
+  updateMeasureUI();
+  showToast(`Auto Measure: 2 measurement(s) from implant center to landmarks`);
+
+  autoMeasureActive = true;
+  document.getElementById('btn-auto-measure').classList.add('active');
+}
+
+function clearAutoMeasure() {
+  autoMeasureData.forEach(id => removeMeasurement(id));
+  autoMeasureData = [];
+  autoMeasureActive = false;
+  document.getElementById('btn-auto-measure').classList.remove('active');
+}
+
+function onMeasureClick(event) {
+  if (!measureMode) return;
+
+  // Get canvas bounds
+  const canvasEl = renderer.domElement;
+  const rect = canvasEl.getBoundingClientRect();
+  measureMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  measureMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  // Raycast against all visible meshes (scapula + implant)
+  measureRaycaster.setFromCamera(measureMouse, camera);
+  const targets = [];
+  if (scapulaMesh) scapulaMesh.traverse(c => { if (c.isMesh && c.visible) targets.push(c); });
+  if (implantMesh && implantMesh.visible) implantMesh.traverse(c => { if (c.isMesh) targets.push(c); });
+
+  const hits = measureRaycaster.intersectObjects(targets, false);
+  if (hits.length === 0) return;
+
+  const hitPoint = hits[0].point.clone();
+  const colorIndex = measurements.length % MEASURE_COLORS.length;
+  const color = MEASURE_COLORS[measurePendingSphere ? colorIndex : (measurements.length % MEASURE_COLORS.length)];
+
+  if (!measurePendingSphere) {
+    // First click — place sphere A
+    measurePendingSphere = createMeasureSphere(hitPoint, color);
+    document.getElementById('measure-hint').textContent = 'Click second point';
+  } else {
+    // Second click — place sphere B and finish measurement
+    const sphereA = measurePendingSphere;
+    const sphereB = createMeasureSphere(hitPoint, sphereA.material.color.getHex());
+    finishMeasurement(sphereA, sphereB, sphereA.material.color.getHex(),
+      (measurements.length) % MEASURE_COLORS.length);
+
+    measurePendingSphere = null;
+
+    // Stay in measure mode for continuous measurements
+    document.getElementById('measure-hint').textContent = 'Click two points on the 3D model';
+  }
+}
+
+// ── Center line ──
+let centerLineMesh = null;
+let entryPointMesh = null;   // orange neon sphere at implant centre (entry on glenoid surface)
+let showCenterLine = false;
+
+function updateCenterLine() {
+  // Remove old line + entry-point marker
+  if (centerLineMesh) {
+    scene.remove(centerLineMesh);
+    centerLineMesh.geometry.dispose();
+    centerLineMesh.material.dispose();
+    centerLineMesh = null;
+  }
+  if (entryPointMesh) {
+    scene.remove(entryPointMesh);
+    entryPointMesh.traverse(c => {
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) c.material.dispose();
+    });
+    entryPointMesh = null;
+  }
+  if (!showCenterLine || !implantMesh || !state.planning) return;
+
+  // The center of the implant in local coords is (0, 0, 0).
+  // The peg axis (after correction) is along -Z in local coords.
+  // Transform origin to world to get the implant center in world space.
+  implantMesh.updateMatrixWorld(true);
+  const worldMatrix = implantMesh.matrixWorld;
+
+  const center = new THREE.Vector3(0, 0, 0).applyMatrix4(worldMatrix);
+
+  // Line direction = the implant's peg axis = local -Z transformed to world
+  // This is the same as the depth direction (into bone / through the scapula)
+  const pegDir = new THREE.Vector3(0, 0, -1).transformDirection(worldMatrix).normalize();
+
+  // Extend the line 80mm in each direction from center (enough to traverse full scapula)
+  const lineLen = 80;
+  const p1 = center.clone().addScaledVector(pegDir, lineLen);
+  const p2 = center.clone().addScaledVector(pegDir, -lineLen);
+
+  const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+  const material = new THREE.LineBasicMaterial({ color: 0x00ff66, linewidth: 2, depthTest: false });
+  centerLineMesh = new THREE.Line(geometry, material);
+  centerLineMesh.renderOrder = 999;
+  scene.add(centerLineMesh);
+
+  // ── Orange NEON entry-point marker at implant centre ──
+  // The implant centre sits at the glenoid surface — that's where the peg
+  // enters the bone. Also the Auto Measure reference point.
+  entryPointMesh = new THREE.Group();
+  const haloMat = new THREE.MeshBasicMaterial({
+    color: 0xffaa33, transparent: true, opacity: 0.35,
+    depthTest: false, depthWrite: false,
+  });
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.9, 24, 24), haloMat);
+  halo.position.copy(center);
+  halo.renderOrder = 1000;
+  entryPointMesh.add(halo);
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0xff7a00, depthTest: false, depthWrite: false,
+  });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.65, 24, 24), coreMat);
+  core.position.copy(center);
+  core.renderOrder = 1001;
+  entryPointMesh.add(core);
+  scene.add(entryPointMesh);
+}
+
+// ── Loaders ──
+const objLoader = new OBJLoader();
+const stlLoader = new STLLoader();
+
+// ── Math helpers ──
+function flatToMatrix4(arr) {
+  const m = new THREE.Matrix4();
+  m.set(
+    arr[0], arr[1], arr[2], arr[3],
+    arr[4], arr[5], arr[6], arr[7],
+    arr[8], arr[9], arr[10], arr[11],
+    arr[12], arr[13], arr[14], arr[15]
+  );
+  return m;
+}
+
+function matrix4ToFlat(m) {
+  const e = m.elements;
+  return [
+    e[0], e[4], e[8], e[12],
+    e[1], e[5], e[9], e[13],
+    e[2], e[6], e[10], e[14],
+    e[3], e[7], e[11], e[15]
+  ];
+}
+
+function buildAdjustMatrix(adj) {
+  const rx = THREE.MathUtils.degToRad(adj.inclination);
+  const ry = THREE.MathUtils.degToRad(adj.retroversion);
+  const rz = THREE.MathUtils.degToRad(adj.rotz);
+  const m = new THREE.Matrix4();
+  m.makeRotationFromEuler(new THREE.Euler(rx, ry, rz, 'XYZ'));
+  m.setPosition(adj.tx, adj.ty, adj.depth);
+  return m;
+}
+
+function computeImplantToPatient() {
+  const p = state.planning.planning;
+  const P2G = flatToMatrix4(p.patientRefToGlenoidRef);
+  const I2G_orig = flatToMatrix4(p.transfoFromImplantToLocalGlenoidRef);
+  const adjustM = buildAdjustMatrix(state.adjust);
+  const I2G_modified = new THREE.Matrix4().multiplyMatrices(adjustM, I2G_orig);
+  const I2P = new THREE.Matrix4().multiplyMatrices(P2G, I2G_modified);
+  return { I2P, I2G_modified };
+}
+
+// ── Pipeline payload parser ──
+// Converts planning_payload.json (pipeline format) to the internal state.planning format
+function parsePipelinePayload(payload) {
+  const cas = payload.case;
+  const lm = payload.landmarks.scapula;
+  const axes = payload.axes.scapula;
+  const planes = payload.planes;
+  const meas = payload.measurements;
+
+  // 1. Build patientRefToGlenoidRef matrix from Friedman axis + glenoid SI
+  //    The Friedman axis (trigonum → glenoid center) is the Z reference.
+  //    Clinically: 0° retroversion = implant peg along Friedman axis.
+  //    Up = glenoid SI axis, orthogonalized against Friedman
+  //    Right = cross(Up, Friedman)
+  const friedmanDir = new THREE.Vector3(...axes.friedman.vector_xyz);
+  const rawUp = new THREE.Vector3(...axes.glenoid_si.vector_xyz);
+
+  // Friedman axis (trigonum → glenoid_center) points laterally = outward.
+  // This is our Z axis: the reference direction for the implant peg.
+  const N = friedmanDir.clone().normalize();
+
+  // Orthogonalize: Friedman is primary (Z), SI is secondary (Y), Right is derived (X)
+  const U = rawUp.clone().addScaledVector(N, -rawUp.dot(N)).normalize();
+  // Right = Up x Friedman (right-hand rule)
+  const R = new THREE.Vector3().crossVectors(U, N).normalize();
+
+  console.log('[Pipeline] Glenoid frame built from Friedman axis:',
+    'Z(Friedman)=', N.toArray().map(v=>v.toFixed(3)),
+    'Y(Up)=', U.toArray().map(v=>v.toFixed(3)),
+    'X(Right)=', R.toArray().map(v=>v.toFixed(3)));
+
+  const center = new THREE.Vector3(...lm.glenoid_center.xyz_mm);
+
+  // Build row-major flat 16 array:
+  // Column 0 = Right (glenoidRight), Column 1 = Up (glenoidUp),
+  // Column 2 = Normal (glenoidNormal), Column 3 = Center (translation)
+  // Row-major layout: [R.x, U.x, N.x, C.x, R.y, U.y, N.y, C.y, R.z, U.z, N.z, C.z, 0, 0, 0, 1]
+  const P2G = [
+    R.x, U.x, N.x, center.x,
+    R.y, U.y, N.y, center.y,
+    R.z, U.z, N.z, center.z,
+    0,   0,   0,   1
+  ];
+
+  // 2. transfoFromImplantToLocalGlenoidRef = identity (no existing planning)
+  const I2G = [
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  ];
+
+  // 3. Map side: pipeline uses 'R'/'L', internal uses 'RIGHT'/'LEFT'
+  const sideMap = { R: 'RIGHT', L: 'LEFT' };
+  const side = sideMap[cas.side] || cas.side;
+
+  // 4. Pre-op measurements
+  const scapMeas = meas.scapula || {};
+  const humMeas = meas.humerus || {};
+
+  const preOp = {
+    retroversion: scapMeas.retroversion_deg ? scapMeas.retroversion_deg.value : null,
+    inferiorInclination: scapMeas.inclination_deg ? scapMeas.inclination_deg.value : null,
+    preOpSubluxation: humMeas.posterior_subluxation_index_percent ? humMeas.posterior_subluxation_index_percent.value : null,
+    headRadiusMm: humMeas.humeral_head_radius_mm ? humMeas.humeral_head_radius_mm.value : null,
+    headDiameterMm: humMeas.humeral_head_diameter_mm ? humMeas.humeral_head_diameter_mm.value : null,
+    neckShaftAngleDeg: humMeas.neck_shaft_angle_deg ? humMeas.neck_shaft_angle_deg.value : null,
+    posteriorOffsetMm: humMeas.posterior_offset_mm ? humMeas.posterior_offset_mm.value : null
+  };
+
+  // 5. Assemble in internal format
+  return {
+    caseId: cas.case_id,
+    patientId: cas.patient_id,
+    side: side,
+    surgeon: cas.doctor_id,
+    examDate: cas.exam_date,
+    surgeryDate: cas.surgery_date,
+    source: 'pipeline',
+    preOp: preOp,
+    planning: {
+      glenoidPlate: null,  // no implant selection yet
+      version: 0,          // base retroversion = 0 (adjustments are relative)
+      inclination: 0,      // base inclination = 0
+      rotation: 0,
+      transfoFromImplantToLocalGlenoidRef: I2G,
+      patientRefToGlenoidRef: P2G,
+      autoPlaced: true
+    },
+    // Keep raw pipeline data for reference
+    _pipelinePayload: payload
+  };
+}
+
+// ── Loaders ──
+function loadScapula(url) {
+  return new Promise((resolve, reject) => {
+    objLoader.load(url, obj => {
+      scapulaMaterial = new THREE.MeshPhongMaterial({
+        color: 0xe6dbc7, side: THREE.DoubleSide,
+        transparent: false, opacity: 1.0, depthWrite: true
+      });
+      obj.traverse(c => { if (c.isMesh) c.material = scapulaMaterial; });
+      resolve(obj);
+    }, undefined, reject);
+  });
+}
+
+function setScapulaTransparent(transparent) {
+  if (!scapulaMaterial) return;
+  scapulaMaterial.transparent = transparent;
+  scapulaMaterial.opacity = transparent ? 0.5 : 1.0;
+  scapulaMaterial.depthWrite = !transparent;
+  scapulaMaterial.needsUpdate = true;
+}
+
+// ── Implant coordinate corrections ──
+// Each entry: { center: [x,y,z], rot: 'ry90' | 'center-only' }
+//
+// Implantcast STLs: peg in +X, plate face at X≈0.
+//   → center + Ry(+90°) maps peg from +X to -Z (GPS convention)
+//
+// TechImport STL: peg in +Z, plate in XY, offset from origin.
+//   → center only (peg already roughly in -Z after centering)
+const IMPLANT_CORRECTIONS = {
+  'data/glenoid_anat_2_short.stl': { center: [12.0, 14.1, 11.0], rot: 'ry90' },
+  'data/glenoid_anat_2_long.stl':  { center: [14.5,  0.0,  0.0], rot: 'ry90' },
+  'data/glenoid_anat_3_short.stl': { center: [13.5,  0.0,  0.0], rot: 'ry90' },
+  'data/glenoid_anat_3_long.stl':  { center: [16.0,  0.0,  0.0], rot: 'ry90' },
+  'data/glenoid_round_3.stl':      { center: [14.5,  0.0,  0.0], rot: 'ry90' },
+  'data/techimport.stl':           { center: [12.5, 12.5,  8.0], rot: 'rx180' },
+  'data/glenoid_anat_2_back.stl':  { center: [5.0,   0.0,  0.0], rot: 'ry90' },
+};
+
+// Back surface models for contact analysis (invisible, follows implant)
+const BACK_SURFACE_MAP = {
+  ANAT_2_SHORT: 'data/glenoid_anat_2_back.stl',
+  ANAT_2_LONG:  'data/glenoid_anat_2_back.stl',
+  // TODO: add back surfaces for other implant types
+};
+let backSurfaceMesh = null;
+
+function applyImplantCorrection(geom, url) {
+  const corr = IMPLANT_CORRECTIONS[url];
+  if (!corr) return;
+
+  const tx = -corr.center[0];
+  const ty = -corr.center[1];
+  const tz = -corr.center[2];
+
+  const positions = geom.attributes.position.array;
+  const normals = geom.attributes.normal ? geom.attributes.normal.array : null;
+
+  if (corr.rot === 'ry90') {
+    // Center + Ry(+90°): (x,y,z) → (z, y, -x)
+    for (let i = 0; i < positions.length; i += 3) {
+      let x = positions[i]     + tx;
+      let y = positions[i + 1] + ty;
+      let z = positions[i + 2] + tz;
+      positions[i]     = z;
+      positions[i + 1] = y;
+      positions[i + 2] = -x;
+    }
+    if (normals) {
+      for (let i = 0; i < normals.length; i += 3) {
+        const nx = normals[i], ny = normals[i+1], nz = normals[i+2];
+        normals[i] = nz; normals[i+1] = ny; normals[i+2] = -nx;
+      }
+    }
+  } else if (corr.rot === 'rx180') {
+    // Center + Rx(180°): (x,y,z) → (x, -y, -z) — mirror/flip 180°
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i]     = positions[i]     + tx;
+      positions[i + 1] = -(positions[i + 1] + ty);
+      positions[i + 2] = -(positions[i + 2] + tz);
+    }
+    if (normals) {
+      for (let i = 0; i < normals.length; i += 3) {
+        normals[i + 1] = -normals[i + 1];
+        normals[i + 2] = -normals[i + 2];
+      }
+    }
+  } else {
+    // Center only — just translate, no rotation
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i]     += tx;
+      positions[i + 1] += ty;
+      positions[i + 2] += tz;
+    }
+  }
+
+  geom.attributes.position.needsUpdate = true;
+  if (normals) geom.attributes.normal.needsUpdate = true;
+  geom.computeBoundingBox();
+  geom.computeBoundingSphere();
+}
+
+function loadImplant(url) {
+  if (implantCache[url]) return Promise.resolve(implantCache[url].clone());
+  const mat = new THREE.MeshPhongMaterial({ color: 0xb0b8b8, shininess: 100, specular: 0x444444 });
+  if (url.toLowerCase().endsWith('.stl')) {
+    return new Promise((resolve, reject) => {
+      stlLoader.load(url, geom => {
+        geom.computeVertexNormals();
+        applyImplantCorrection(geom, url);
+        const mesh = new THREE.Mesh(geom, mat);
+        const obj = new THREE.Group();
+        obj.add(mesh);
+        implantCache[url] = obj;
+        resolve(obj.clone());
+      }, undefined, reject);
+    });
+  }
+  return new Promise((resolve, reject) => {
+    objLoader.load(url, obj => {
+      obj.traverse(c => { if (c.isMesh) c.material = mat; });
+      implantCache[url] = obj;
+      resolve(obj.clone());
+    }, undefined, reject);
+  });
+}
+
+function updateImplantPose() {
+  if (!implantMesh || !state.planning) return;
+  const { I2P } = computeImplantToPatient();
+  implantMesh.matrix.identity();
+  implantMesh.applyMatrix4(I2P);
+
+  // Sync back surface mesh (same transform as implant)
+  if (backSurfaceMesh) {
+    backSurfaceMesh.matrix.copy(implantMesh.matrix);
+    backSurfaceMesh.matrixWorldNeedsUpdate = true;
+  }
+
+  // Update center line position
+  updateCenterLine();
+
+  // Update cut plane if active
+  if (typeof cutViewActive !== 'undefined' && cutViewActive) updateCutPlane();
+}
+
+// ── Implant catalog ──
+const IMPLANT_TYPES = {
+  ANAT_2_SHORT: {
+    label: 'Anatomical 2 Short', ref: '3800-4028',
+    fileBySide: { LEFT: 'data/glenoid_anat_2_short.stl', RIGHT: 'data/glenoid_anat_2_short.stl' },
+    planningKeys: ['Standard/Standard']
+  },
+  ANAT_2_LONG: {
+    label: 'Anatomical 2 Long', ref: '3800-4029',
+    fileBySide: { LEFT: 'data/glenoid_anat_2_long.stl', RIGHT: 'data/glenoid_anat_2_long.stl' },
+    planningKeys: ['StandardLong/Standard', 'StandardExtended/Standard']
+  },
+  ANAT_3_SHORT: {
+    label: 'Anatomical 3 Short', ref: '3800-4009',
+    fileBySide: { LEFT: 'data/glenoid_anat_3_short.stl', RIGHT: 'data/glenoid_anat_3_short.stl' },
+    planningKeys: ['Standard/Standard3']
+  },
+  ANAT_3_LONG: {
+    label: 'Anatomical 3 Long', ref: '3800-4010',
+    fileBySide: { LEFT: 'data/glenoid_anat_3_long.stl', RIGHT: 'data/glenoid_anat_3_long.stl' },
+    planningKeys: ['StandardLong/Standard3']
+  },
+  ROUND_3: {
+    label: 'Round 3', ref: '3800-4001',
+    fileBySide: { LEFT: 'data/glenoid_round_3.stl', RIGHT: 'data/glenoid_round_3.stl' },
+    planningKeys: ['Round/Standard']
+  },
+  TECHIMPORT: {
+    label: 'TECHIMPORT',
+    fileBySide: { LEFT: 'data/techimport.stl', RIGHT: 'data/techimport.stl' },
+    planningKeys: ['TechImport/Standard']
+  }
+};
+
+const PLANNING_KEY_TO_TYPE = {};
+for (const [typeKey, def] of Object.entries(IMPLANT_TYPES)) {
+  for (const pk of def.planningKeys) PLANNING_KEY_TO_TYPE[pk] = typeKey;
+}
+
+function resolveImplantFromPlanning(planningGlenoidPlate, side) {
+  const parts = planningGlenoidPlate.split('/');
+  let typeSize;
+  if (parts.length >= 3) typeSize = `${parts[1]}/${parts[2]}`;
+  else if (parts.length === 2) typeSize = `${parts[0]}/${parts[1]}`;
+  else typeSize = planningGlenoidPlate;
+  const typeKey = PLANNING_KEY_TO_TYPE[typeSize];
+  if (!typeKey) return null;
+  return { typeKey, file: implantFileFor(typeKey, side) };
+}
+
+function implantFileFor(typeKey, side) {
+  const def = IMPLANT_TYPES[typeKey];
+  if (!def) return null;
+  const sideUp = (side || 'LEFT').toUpperCase();
+  return def.fileBySide[sideUp] || def.fileBySide.LEFT;
+}
+
+function planningPlateFor(typeKey, side, currentPlate = '') {
+  const def = IMPLANT_TYPES[typeKey] || IMPLANT_TYPES.ANAT_2_SHORT;
+  const typeSize = def.planningKeys[0] || 'Standard/Standard';
+  const sideUp = (side || '').toUpperCase();
+  if (sideUp === 'LEFT' || sideUp === 'RIGHT') return `${sideUp}/${typeSize}`;
+  const existingSide = String(currentPlate).split('/')[0].toUpperCase();
+  if (existingSide === 'LEFT' || existingSide === 'RIGHT') return `${existingSide}/${typeSize}`;
+  return typeSize;
+}
+
+// ── Toast ──
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg, ms = 2200) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+
+// ── UI refresh ──
+function refreshUI() {
+  if (state.planning) {
+    const p = state.planning.planning;
+    document.getElementById('v-retro').textContent =
+      `${(p.version + state.adjust.retroversion).toFixed(1)}°`;
+    document.getElementById('v-incl').textContent =
+      `${(p.inclination + state.adjust.inclination).toFixed(1)}°`;
+  } else {
+    document.getElementById('v-retro').textContent = `${state.adjust.retroversion.toFixed(1)}°`;
+    document.getElementById('v-incl').textContent = `${state.adjust.inclination.toFixed(1)}°`;
+  }
+  document.getElementById('v-depth').textContent = `${state.adjust.depth}mm`;
+  document.getElementById('v-tx').textContent = `${state.adjust.tx}mm`;
+  document.getElementById('v-ty').textContent = `${state.adjust.ty}mm`;
+  document.getElementById('v-rotz').textContent = `${state.adjust.rotz}°`;
+
+  const m = (state.planning && state.planning.preOp) || {};
+  const fmt = (v, suf) => (v === undefined || v === null || v === '—') ? '—' : `${v}${suf}`;
+  const fmtF = (v, suf, dec = 1) => (v === undefined || v === null || v === '—') ? '—' : `${Number(v).toFixed(dec)}${suf}`;
+  document.getElementById('m-retro').textContent = fmtF(m.retroversion, '°');
+  document.getElementById('m-incl').textContent = fmtF(m.inferiorInclination, '°');
+  document.getElementById('m-sublux').textContent = fmtF(m.preOpSubluxation, '%');
+  document.getElementById('m-head-radius').textContent = fmtF(m.headRadiusMm, 'mm');
+  document.getElementById('m-nsa').textContent = fmtF(m.neckShaftAngleDeg, '°');
+  document.getElementById('m-head-diam').textContent = fmtF(m.headDiameterMm, 'mm');
+
+  if (state.planning) {
+    const cid = state.planning.patientId || state.planning.caseId;
+    const sideLabel = state.planning.side === 'RIGHT' ? 'R' : state.planning.side === 'LEFT' ? 'L' : state.planning.side;
+    const surgeonLabel = state.planning.surgeon && state.planning.surgeon !== 'local-doctor' ? ` · ${state.planning.surgeon}` : '';
+    document.getElementById('case-info').textContent =
+      `${cid} · ${sideLabel}${surgeonLabel}`;
+  }
+
+  // Implant cards
+  document.querySelectorAll('.implant-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.implant === state.selectedImplant);
+  });
+
+  // Scenarios
+  state.scenarios.forEach((s, i) => {
+    const btn = document.querySelector(`#scenarios button[data-slot="${i}"]`);
+    if (s) {
+      btn.textContent = `Scenario ${i+1}: ${s.implant}`;
+      btn.classList.add('has-data');
+    } else {
+      btn.textContent = `Scenario ${i+1}: empty`;
+      btn.classList.remove('has-data');
+    }
+  });
+}
+
+// ── Set implant ──
+async function setImplant(key) {
+  state.selectedImplant = key;
+  const side = state.planning && state.planning.side;
+  const url = implantFileFor(key, side);
+  if (!url) {
+    showToast(`No file for implant ${key}`, 3500);
+    return;
+  }
+  if (implantMesh) scene.remove(implantMesh);
+  if (backSurfaceMesh) { scene.remove(backSurfaceMesh); backSurfaceMesh = null; }
+  backSurfaceCache = null; // invalidate cached back-surface analysis
+  try {
+    implantMesh = await loadImplant(url);
+    implantMesh.matrixAutoUpdate = false;
+    scene.add(implantMesh);
+    implantMesh.visible = state.showImplant;
+
+    // Load back surface for contact analysis (invisible)
+    const backUrl = BACK_SURFACE_MAP[key];
+    if (backUrl) {
+      try {
+        backSurfaceMesh = await loadImplant(backUrl);
+        backSurfaceMesh.matrixAutoUpdate = false;
+        backSurfaceMesh.visible = false; // always invisible
+        scene.add(backSurfaceMesh);
+        console.log(`[Contact] Back surface loaded: ${backUrl}`);
+      } catch (e2) {
+        console.warn('[Contact] Failed to load back surface:', e2);
+        backSurfaceMesh = null;
+      }
+    }
+
+    if (state.planning) updateImplantPose();
+  } catch (e) {
+    console.error('Failed to load implant:', e);
+    showToast('Failed to load implant model', 3000);
+  }
+  refreshUI();
+  scheduleContactUpdate();
+  saveImplantState();
+}
+
+// ── GPS parsers ──
+const HEADER_SIZE = 0x60;
+
+function parseMeshBin(arrayBuffer) {
+  const data = new DataView(arrayBuffer);
+  const nVerts = data.getUint32(0x5C, false);
+  const geom = new THREE.BufferGeometry();
+  const verts = new Float32Array(nVerts * 3);
+  let off = HEADER_SIZE;
+  for (let i = 0; i < nVerts * 3; i++) {
+    verts[i] = data.getFloat64(off, true);
+    off += 8;
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  off += 4;
+  const norms = new Float32Array(nVerts * 3);
+  for (let i = 0; i < nVerts * 3; i++) {
+    norms[i] = data.getFloat64(off, true);
+    off += 8;
+  }
+  geom.setAttribute('normal', new THREE.BufferAttribute(norms, 3));
+  const nIdx = data.getUint32(off, false);
+  off += 4;
+  const indices = new Uint32Array(nIdx);
+  for (let i = 0; i < nIdx; i++) {
+    indices[i] = data.getUint32(off, true);
+    off += 4;
+  }
+  geom.setIndex(new THREE.BufferAttribute(indices, 1));
+  return geom;
+}
+
+function parseGpsIni(text) {
+  const result = {};
+  let section = '';
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith('[') && line.endsWith(']')) {
+      section = line.slice(1, -1);
+      continue;
+    }
+    const eq = line.indexOf('=');
+    if (eq > -1) {
+      const k = line.slice(0, eq).trim();
+      const v = line.slice(eq + 1).trim();
+      result[`${section}.${k}`] = v;
+    }
+  }
+  return result;
+}
+
+function iniMatrixToFlat(s) {
+  return s.split(/\s+/).map(Number);
+}
+
+// ── Import case folder ──
+async function importCaseFolder(fileList) {
+  const files = {};
+  for (const f of fileList) {
+    const path = f.webkitRelativePath || f.name;
+    files[path] = f;
+  }
+
+  let rootPrefix = null;
+  for (const path of Object.keys(files)) {
+    if (path.endsWith('/case.ini') || path === 'case.ini') {
+      rootPrefix = path.slice(0, path.length - 'case.ini'.length);
+      break;
+    }
+  }
+  if (rootPrefix === null) {
+    const first = Object.keys(files)[0];
+    const seg = first.split('/');
+    rootPrefix = seg.length > 1 ? seg[0] + '/' : '';
+  }
+
+  const findFile = (relative) => {
+    const candidates = [rootPrefix + relative, relative];
+    for (const c of candidates) if (files[c]) return files[c];
+    for (const path of Object.keys(files)) {
+      if (path.endsWith('/' + relative)) return files[path];
+    }
+    return null;
+  };
+
+  const readText = async (file) => file ? await file.text() : null;
+  const readBuf = async (file) => file ? await file.arrayBuffer() : null;
+
+  const caseIni = await readText(findFile('case.ini'));
+  const caseData = caseIni ? parseGpsIni(caseIni) : {};
+
+  const landmarksFile = findFile('01-segmentation/landmarks.ini')
+    || findFile('05-autoSegmentation/landmarks.ini');
+  const landmarksIni = await readText(landmarksFile);
+  const landmarks = landmarksIni ? parseGpsIni(landmarksIni) : null;
+  if (!landmarks) {
+    throw new Error('landmarks.ini not found. Cannot place implant.');
+  }
+
+  if (!landmarks['References.PatientRefToGlenoidRef']) {
+    const parseVec = (key) => {
+      const v = landmarks[key];
+      if (!v) return null;
+      return v.split(/\s+/).map(Number);
+    };
+    const glen = parseVec('References.Glenoid');
+    const trig = parseVec('References.Trigonum');
+    const infp = parseVec('References.InferiorPt');
+    if (!glen || !trig || !infp) {
+      throw new Error('landmarks.ini missing Glenoid/Trigonum/InferiorPt.');
+    }
+    const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+    const norm = (v) => { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return [v[0]/l, v[1]/l, v[2]/l]; };
+    const dot3 = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    const scale = (v, s) => [v[0]*s, v[1]*s, v[2]*s];
+
+    const Z = norm(sub(glen, trig));
+    const v1 = sub(infp, trig);
+    const v2 = sub(glen, trig);
+    let spn = norm(cross(v1, v2));
+    let X = scale(spn, -1);
+    X = sub(X, scale(Z, dot3(X, Z)));
+    X = norm(X);
+    const Y = norm(cross(Z, X));
+    const m = [
+      X[0], Y[0], Z[0], glen[0],
+      X[1], Y[1], Z[1], glen[1],
+      X[2], Y[2], Z[2], glen[2],
+      0, 0, 0, 1
+    ];
+    landmarks['References.PatientRefToGlenoidRef'] = m.map(v => v.toString()).join(' ');
+  }
+
+  const scapulaSources = {};
+  const oFile = findFile('03-osteophyte/scapula.mesh.bin');
+  const sFile = findFile('01-segmentation/scapula.mesh.bin')
+    || findFile('05-autoSegmentation/scapula.mesh.bin');
+  if (sFile) scapulaSources.original = await readBuf(sFile);
+  if (oFile) scapulaSources.osteo = await readBuf(oFile);
+  if (!scapulaSources.original && !scapulaSources.osteo) {
+    throw new Error('scapula.mesh.bin not found in any segmentation folder.');
+  }
+
+  const reverseFile = findFile('02-planning/reverse.ini');
+  const reverseIni = await readText(reverseFile);
+  const reverse = reverseIni ? parseGpsIni(reverseIni) : null;
+
+  const caseSide = landmarks['Infos.side'] || caseData['Infos.side'] || '?';
+  const defaultImplantTransform = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+
+  const newPlanning = {
+    caseId: caseData['Case.caseShortId'] || 'imported',
+    side: caseSide,
+    surgeon: caseData['Infos.surgeonName'] || '?',
+    preOp: { retroversion: '—', inferiorInclination: '—', preOpSubluxation: '—' },
+    planning: {
+      glenoidPlate: reverse ? (reverse['Planning.GlenoidPlate'] || '') : 'ANAT_2_SHORT',
+      version: reverse ? parseFloat(reverse['Planning.Version'] || 0) : 0,
+      inclination: reverse ? parseFloat(reverse['Planning.Inclination'] || 0) : 0,
+      rotation: reverse ? parseFloat(reverse['Planning.Rotation'] || 0) : 0,
+      transfoFromImplantToLocalGlenoidRef: reverse
+        ? iniMatrixToFlat(reverse['Planning.transfoFromImplantToLocalGlenoidRef'])
+        : defaultImplantTransform,
+      patientRefToGlenoidRef: iniMatrixToFlat(landmarks['References.PatientRefToGlenoidRef']),
+      autoPlaced: !reverse
+    }
+  };
+
+  return { planning: newPlanning, scapulaSources };
+}
+
+async function applyImportedCase(imported) {
+  if (scapulaMesh) scene.remove(scapulaMesh);
+  if (implantMesh) scene.remove(implantMesh);
+  scapulaMesh = null;
+  implantMesh = null;
+  glenoidRayMesh = null; // invalidate raycasting cache
+
+  state.planning = imported.planning;
+  state.adjust = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+  state.scapulaSources = imported.scapulaSources;
+
+  const buf = imported.scapulaSources.original || imported.scapulaSources.osteo;
+  const geom = parseMeshBin(buf);
+  scapulaMaterial = new THREE.MeshPhongMaterial({
+    color: 0xe6dbc7, side: THREE.DoubleSide,
+    transparent: state.transparent,
+    opacity: state.transparent ? 0.5 : 1.0,
+    depthWrite: !state.transparent
+  });
+  scapulaMesh = new THREE.Mesh(geom, scapulaMaterial);
+  scene.add(scapulaMesh);
+  buildScapulaBackMesh(geom);
+
+  const g = state.planning.planning.patientRefToGlenoidRef;
+  glenoidRight.set(g[0], g[4], g[8]).normalize();
+  glenoidUp.set(g[1], g[5], g[9]).normalize();
+  glenoidCenter.set(g[3], g[7], g[11]);
+
+  if (state.planning._pipelinePayload) {
+    friedmanAxis.set(g[2], g[6], g[10]).normalize();
+    const sn = state.planning._pipelinePayload.planes.glenoid_plane.normal_xyz;
+    glenoidNormal.set(sn[0], sn[1], sn[2]).normalize();
+    if (glenoidNormal.dot(friedmanAxis) < 0) glenoidNormal.negate();
+    viewDistance = 80;
+  } else {
+    glenoidNormal.set(g[2], g[6], g[10]).normalize();
+    friedmanAxis.copy(glenoidNormal);
+    const bbox = new THREE.Box3().setFromObject(scapulaMesh);
+    viewDistance = bbox.getSize(new THREE.Vector3()).length() * 0.7;
+  }
+
+  // Hide placeholder
+  document.getElementById('viewer-placeholder').style.display = 'none';
+
+  if (state.planning.planning.glenoidPlate && state.planning.planning.transfoFromImplantToLocalGlenoidRef) {
+    const found = resolveImplantFromPlanning(
+      state.planning.planning.glenoidPlate, state.planning.side
+    );
+    if (found) {
+      state.selectedImplant = found.typeKey;
+      await setImplant(state.selectedImplant);
+    } else if (state.planning.planning.autoPlaced) {
+      state.selectedImplant = 'ANAT_2_SHORT';
+      await setImplant(state.selectedImplant);
+      showToast('Auto-placed baseplate from landmarks (no planning found)', 5000);
+    } else {
+      showToast(`Implant "${state.planning.planning.glenoidPlate}" not in catalog — using default`, 4500);
+      state.selectedImplant = 'ANAT_2_SHORT';
+      await setImplant(state.selectedImplant);
+    }
+  }
+
+  setViewFn('glenoid');
+  refreshUI();
+  scheduleContactUpdate();
+  showToast(`Case ${state.planning.caseId} imported`);
+}
+
+// ── Bone Contact Analysis (Raycasting) ──
+
+// Cached sub-mesh of glenoid region for fast raycasting
+let glenoidRayMesh = null;
+
+function buildGlenoidRayMesh() {
+  if (!scapulaMesh) return null;
+
+  const gc = glenoidCenter;
+  const maxDist2 = 28 * 28; // 28mm radius from glenoid center (tighter = faster raycast)
+
+  // Collect faces from scapula where at least one vertex is near glenoid
+  const positions = [];
+
+  scapulaMesh.updateMatrixWorld(true);
+  scapulaMesh.traverse(c => {
+    if (!c.isMesh) return;
+    const geom = c.geometry;
+    const pos = geom.attributes.position;
+    const mat = c.matrixWorld;
+    const idx = geom.index;
+
+    // Transform all vertices to world space
+    const wv = [];
+    for (let i = 0; i < pos.count; i++) {
+      const v = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i));
+      v.applyMatrix4(mat);
+      wv.push(v);
+    }
+
+    // Iterate faces — keep faces where any vertex is near glenoid center
+    const faceCount = idx ? idx.count / 3 : pos.count / 3;
+    for (let f = 0; f < faceCount; f++) {
+      const ai = idx ? idx.getX(f * 3)     : f * 3;
+      const bi = idx ? idx.getX(f * 3 + 1) : f * 3 + 1;
+      const ci = idx ? idx.getX(f * 3 + 2) : f * 3 + 2;
+
+      const va = wv[ai], vb = wv[bi], vc = wv[ci];
+
+      const nearA = (va.x-gc.x)**2 + (va.y-gc.y)**2 + (va.z-gc.z)**2 < maxDist2;
+      const nearB = (vb.x-gc.x)**2 + (vb.y-gc.y)**2 + (vb.z-gc.z)**2 < maxDist2;
+      const nearC = (vc.x-gc.x)**2 + (vc.y-gc.y)**2 + (vc.z-gc.z)**2 < maxDist2;
+
+      if (nearA || nearB || nearC) {
+        positions.push(
+          va.x, va.y, va.z,
+          vb.x, vb.y, vb.z,
+          vc.x, vc.y, vc.z
+        );
+      }
+    }
+  });
+
+  if (positions.length === 0) return null;
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geom.computeVertexNormals();
+  geom.computeBoundingSphere();
+  geom.computeBoundingBox();
+
+  // Mesh at identity transform — vertices are already in world coords
+  const mesh = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+  mesh.updateMatrixWorld(true);
+
+  console.log(`[Contact] Glenoid ray-mesh built: ${positions.length / 9} triangles`);
+  return mesh;
+}
+
+// Cache for back surface analysis (depends only on geometry, not on implant pose)
+let backSurfaceCache = null;
+
+function analyzeContact() {
+  if (!scapulaMesh || !backSurfaceMesh || !state.planning) return null;
+
+  // Build/cache glenoid sub-mesh for raycasting
+  if (!glenoidRayMesh) {
+    glenoidRayMesh = buildGlenoidRayMesh();
+  }
+  if (!glenoidRayMesh) return null;
+
+  // Get back surface geometry (the actual implant back shape)
+  let backGeom = null;
+  backSurfaceMesh.traverse(c => { if (c.isMesh && !backGeom) backGeom = c.geometry; });
+  if (!backGeom) return null;
+
+  // ── Cache static back-surface analysis (dedup, bounds, peg detection) ──
+  // These depend only on the geometry, not on the implant pose. Cache by geometry identity.
+  let cached = backSurfaceCache;
+  if (!cached || cached.geom !== backGeom) {
+    const bPos = backGeom.attributes.position;
+    const totalVerts = bPos.count;
+
+    // Bounds in local coords (after correction)
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < totalVerts; i++) {
+      const x = bPos.getX(i), y = bPos.getY(i);
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+    const radiusX = Math.max(Math.abs(minX), Math.abs(maxX));
+    const radiusY = Math.max(Math.abs(minY), Math.abs(maxY));
+
+    // Peg hole detection
+    let pegRadius = 0;
+    const centerVerts = [];
+    for (let i = 0; i < totalVerts; i++) {
+      const x = bPos.getX(i), y = bPos.getY(i);
+      const r = Math.sqrt(x * x + y * y);
+      if (r < 6) centerVerts.push(r);
+    }
+    if (centerVerts.length === 0) {
+      let closestR = Infinity;
+      for (let i = 0; i < totalVerts; i++) {
+        const x = bPos.getX(i), y = bPos.getY(i);
+        const r = Math.sqrt(x * x + y * y);
+        if (r < closestR) closestR = r;
+      }
+      pegRadius = closestR;
+    }
+
+    // Dedup via grid binning (1.5mm balances detail vs raycasting cost)
+    const gridRes = 1.5;
+    const vertexMap = new Map();
+    for (let i = 0; i < totalVerts; i++) {
+      const lx = bPos.getX(i), ly = bPos.getY(i), lz = bPos.getZ(i);
+      const gx = Math.round(lx / gridRes);
+      const gy = Math.round(ly / gridRes);
+      const key = `${gx},${gy}`;
+      if (!vertexMap.has(key)) {
+        vertexMap.set(key, { lx, ly, lz, count: 1 });
+      } else {
+        const v = vertexMap.get(key);
+        v.lz = (v.lz * v.count + lz) / (v.count + 1);
+        v.count++;
+      }
+    }
+    const uniqueVerts = Array.from(vertexMap.values());
+    console.log(`[Contact CACHE BUILD] Back surface: ${totalVerts} verts → ${uniqueVerts.length} unique (${gridRes}mm grid)`);
+
+    cached = backSurfaceCache = {
+      geom: backGeom,
+      uniqueVerts, radiusX, radiusY, pegRadius,
+      minX, maxX, minY, maxY,
+    };
+  }
+
+  const { uniqueVerts, radiusX, radiusY, pegRadius } = cached;
+  const totalVerts = backGeom.attributes.position.count;
+
+  // ── World transform ──
+  backSurfaceMesh.updateMatrixWorld(true);
+  const mat = backSurfaceMesh.matrixWorld;
+
+  // ── Directions ──
+  const intoBone = glenoidNormal.clone().negate();
+  const awayFromBone = glenoidNormal.clone();
+
+  const raycaster = new THREE.Raycaster();
+  const rayOffset = 15;
+  const depthThreshold = 0.5;
+
+  const samples = [];
+
+  for (const vert of uniqueVerts) {
+    const { lx, ly, lz } = vert;
+
+    // Transform vertex to world coords
+    const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(mat);
+
+    // Ray origin: 15mm above surface (away from bone), shoot into bone
+    const origin = wp.clone().addScaledVector(awayFromBone, rayOffset);
+    raycaster.set(origin, intoBone);
+    raycaster.far = rayOffset + 30;
+
+    const hits = raycaster.intersectObject(glenoidRayMesh, false);
+
+    let depthDist = Infinity;
+    let isContact = false;
+
+    if (hits.length > 0) {
+      depthDist = hits[0].distance - rayOffset;
+      isContact = depthDist < depthThreshold;
+    }
+
+    samples.push({ lx, ly, depthDist, isContact });
+  }
+
+  const contactCount = samples.filter(s => s.isContact).length;
+  const percentage = Math.round((contactCount / samples.length) * 100);
+
+  // Debug
+  const finite = samples.filter(s => isFinite(s.depthDist));
+  const depths = finite.map(s => s.depthDist).sort((a,b) => a - b);
+  const minD = depths[0]?.toFixed(1) ?? '?';
+  const maxD = depths[depths.length-1]?.toFixed(1) ?? '?';
+  const meanD = depths.length > 0 ? (depths.reduce((a,b) => a+b, 0) / depths.length).toFixed(1) : '?';
+  const noHit = samples.length - finite.length;
+  console.log(`[Contact] ${samples.length} samples, ${contactCount} contact → ${percentage}%`);
+  console.log(`[Contact] Depth: min=${minD} max=${maxD} mean=${meanD}mm, ${noHit} no-hit`);
+
+  return { samples, percentage, radiusX, radiusY, pegRadius };
+}
+
+function drawContactMap(analysis) {
+  const canvas = document.getElementById('contact-map');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+
+  if (!analysis) {
+    ctx.clearRect(0, 0, w, h);
+    document.getElementById('contact-pct').textContent = '—';
+    return;
+  }
+
+  const { samples, percentage, radiusX, radiusY, pegRadius } = analysis;
+  const maxR = Math.max(radiusX, radiusY);
+  const scale = (Math.min(w, h) - 20) / (2 * maxR);
+  const cx = w / 2, cy = h / 2;
+
+  // Build a pixel-level image for smooth rendering
+  const imgData = ctx.createImageData(w, h);
+  const data = imgData.data;
+
+  // Build spatial grid for fast nearest-sample lookup
+  // Grid cells at ~1mm resolution for the back surface samples
+  const gridCellSize = 1.0; // mm
+  const sampleGrid = new Map();
+  for (const s of samples) {
+    const gi = Math.round(s.lx / gridCellSize);
+    const gj = Math.round(s.ly / gridCellSize);
+    const key = `${gi},${gj}`;
+    // Keep the sample closest to cell center
+    if (!sampleGrid.has(key)) {
+      sampleGrid.set(key, s);
+    }
+  }
+
+  const pegR2 = pegRadius > 0 ? pegRadius * pegRadius : 0;
+  const maxSearchR = 2; // grid cells to search for nearest sample
+
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      // Pixel to implant local coords
+      const lx = (px - cx) / scale;
+      const ly = -(py - cy) / scale;
+
+      // Peg hole — render as subtle dark circle
+      if (pegR2 > 0 && lx * lx + ly * ly < pegR2) {
+        const idx = (py * w + px) * 4;
+        data[idx] = 30; data[idx+1] = 30; data[idx+2] = 34; data[idx+3] = 255;
+        continue;
+      }
+
+      // Find nearest sample via grid lookup
+      const gi = Math.round(lx / gridCellSize);
+      const gj = Math.round(ly / gridCellSize);
+
+      let nearest = null;
+      let minD2 = Infinity;
+      for (let di = -maxSearchR; di <= maxSearchR; di++) {
+        for (let dj = -maxSearchR; dj <= maxSearchR; dj++) {
+          const s = sampleGrid.get(`${gi+di},${gj+dj}`);
+          if (s) {
+            const d2 = (s.lx - lx) * (s.lx - lx) + (s.ly - ly) * (s.ly - ly);
+            if (d2 < minD2) { minD2 = d2; nearest = s; }
+          }
+        }
+      }
+
+      // Only draw if there's a nearby sample (within ~1.5mm) — this defines the implant shape
+      if (!nearest || minD2 > 2.25) continue;
+
+      let r, g, b;
+      const dd = nearest.depthDist;
+      if (!nearest.isContact) {
+        // No contact (gap > 2mm or no hit) — dark gray
+        r = 60; g = 60; b = 65;
+      } else if (dd < -1.0) {
+        // Embedded inside bone — blue/cyan
+        r = 30; g = 120; b = 200;
+      } else if (dd < 0) {
+        // Surface contact — dark green
+        r = 0; g = 130; b = 50;
+      } else {
+        // Contact with small gap (0–0.5mm) — bright green
+        r = 23; g = 201; b = 100;
+      }
+
+      // Slight edge darkening
+      const ex = lx / radiusX, ey = ly / radiusY;
+      const edgeFade = 1.0 - 0.15 * Math.min(1, ex*ex + ey*ey);
+      const idx = (py * w + px) * 4;
+      data[idx]     = Math.round(r * edgeFade);
+      data[idx + 1] = Math.round(g * edgeFade);
+      data[idx + 2] = Math.round(b * edgeFade);
+      data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  // Draw subtle plate outline
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, radiusX * scale, radiusY * scale, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Draw peg hole outline
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, pegRadius * scale, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Update percentage text
+  document.getElementById('contact-pct').textContent = percentage;
+}
+
+let contactDebounce = null;
+function scheduleContactUpdate() {
+  clearTimeout(contactDebounce);
+  contactDebounce = setTimeout(() => {
+    const t0 = performance.now();
+    const result = analyzeContact();
+    const t1 = performance.now();
+    drawContactMap(result);
+    const t2 = performance.now();
+    console.log(`[PERF contact] analyze=${(t1-t0).toFixed(0)}ms draw=${(t2-t1).toFixed(0)}ms total=${(t2-t0).toFixed(0)}ms`);
+  }, 800);
+}
+
+// ── View control ──
+function setViewFn(name) {
+  const dist = viewDistance;
+  let camPos, up;
+
+  if (name === 'glenoid') {
+    // Look along Friedman axis at glenoid center (the 0° reference direction)
+    const viewDir = friedmanAxis.lengthSq() > 0 ? friedmanAxis : glenoidNormal;
+    camPos = glenoidCenter.clone().add(viewDir.clone().multiplyScalar(dist));
+    up = glenoidUp.clone();
+  } else if (name === 'anterior') {
+    camPos = glenoidCenter.clone().add(glenoidRight.clone().multiplyScalar(-dist));
+    up = glenoidUp.clone();
+  } else if (name === 'lateral') {
+    camPos = glenoidCenter.clone().add(glenoidRight.clone().multiplyScalar(dist));
+    up = glenoidUp.clone();
+  } else if (name === 'inferior') {
+    // Camera below, looking up — along -glenoidUp axis
+    camPos = glenoidCenter.clone().add(glenoidUp.clone().multiplyScalar(-dist));
+    up = glenoidNormal.clone();
+  }
+
+  if (camPos) {
+    controls.target.copy(glenoidCenter);
+    camera.position.copy(camPos);
+    camera.up.copy(up);
+    camera.lookAt(glenoidCenter);
+    controls.update();
+  }
+
+  // Update segmented buttons
+  document.querySelectorAll('.segmented .seg-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `view-${name}`);
+  });
+}
+
+// ── Resize ──
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+if (window.ResizeObserver) {
+  new ResizeObserver(resize).observe(canvas.parentElement);
+}
+
+// ── Render loop ──
+function animate() {
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+// ── Init ──
+resize();
+animate();
+
+// Try loading planning data: pipeline format first, then legacy GPS format
+try {
+  let planning = null;
+  let isPipeline = false;
+
+  // 1. Try pipeline format (planning_payload.json)
+  try {
+    const payload = await fetch('data/planning_payload.json').then(r => {
+      if (!r.ok) throw new Error('No planning_payload.json');
+      return r.json();
+    });
+    planning = parsePipelinePayload(payload);
+    isPipeline = true;
+    console.log('[Init] Loaded pipeline planning_payload.json — case:', planning.caseId);
+  } catch (pipeErr) {
+    // 2. Fallback to legacy GPS format (planning.json)
+    const legacy = await fetch('data/planning.json').then(r => {
+      if (!r.ok) throw new Error('No planning.json');
+      return r.json();
+    });
+    planning = legacy;
+    console.log('[Init] Loaded legacy planning.json — case:', planning.caseId);
+  }
+
+  state.planning = planning;
+
+  // Cache-bust OBJ URLs to prevent stale browser caches
+  const cacheBust = '?v=' + Date.now();
+  scapulaMesh = await loadScapula('data/scapula.obj' + cacheBust);
+  scene.add(scapulaMesh);
+
+  const g = planning.planning.patientRefToGlenoidRef;
+  glenoidRight.set(g[0], g[4], g[8]).normalize();
+  glenoidUp.set(g[1], g[5], g[9]).normalize();
+
+  // P2G column 2 = Friedman axis (for pipeline) or surface normal (for legacy)
+  if (planning._pipelinePayload) {
+    friedmanAxis.set(g[2], g[6], g[10]).normalize();
+    const sn = planning._pipelinePayload.planes.glenoid_plane.normal_xyz;
+    glenoidNormal.set(sn[0], sn[1], sn[2]).normalize();
+    if (glenoidNormal.dot(friedmanAxis) < 0) glenoidNormal.negate();
+  } else {
+    glenoidNormal.set(g[2], g[6], g[10]).normalize();
+    friedmanAxis.copy(glenoidNormal);
+  }
+
+  // ── Re-center scapula so glenoid center = origin (0,0,0) ──
+  // Move the scapula Group so glenoid center maps to world origin.
+  // The OBJ vertices stay in their original NIfTI physical coords;
+  // we use Group.position to translate the whole mesh.
+  const rawCenter = new THREE.Vector3(g[3], g[7], g[11]);
+  scapulaMesh.position.set(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+  scapulaMesh.updateMatrixWorld(true);
+
+  // Zero the P2G translation — the glenoid is now at world origin
+  planning.planning.patientRefToGlenoidRef[3] = 0;
+  planning.planning.patientRefToGlenoidRef[7] = 0;
+  planning.planning.patientRefToGlenoidRef[11] = 0;
+  glenoidCenter.set(0, 0, 0);
+
+  console.log('[Init] Scapula re-centered: glenoid at origin, Group.position =',
+    scapulaMesh.position.toArray().map(v=>v.toFixed(2)).join(','));
+
+  // Build back mesh from first child geometry (scapulaMesh is a Group from OBJLoader)
+  // Back mesh must also be offset since it's a separate scene object using same geometry
+  let firstGeom = null;
+  scapulaMesh.traverse(c => { if (c.isMesh && !firstGeom) firstGeom = c.geometry; });
+  if (firstGeom) {
+    buildScapulaBackMesh(firstGeom);
+    // Back mesh uses same geometry but is added to scene root — offset it too
+    if (scapulaBackMesh) {
+      scapulaBackMesh.position.copy(scapulaMesh.position);
+      scapulaBackMesh.updateMatrixWorld(true);
+    }
+  }
+
+  // ViewDistance: for pipeline, zoom to glenoid region; for legacy, use full bbox
+  if (planning._pipelinePayload) {
+    viewDistance = 80;
+  } else {
+    const bbox = new THREE.Box3().setFromObject(scapulaMesh);
+    viewDistance = bbox.getSize(new THREE.Vector3()).length() * 0.7;
+  }
+
+  const gp = state.planning.planning.glenoidPlate;
+  if (gp) {
+    const found = resolveImplantFromPlanning(gp, state.planning.side);
+    if (found) state.selectedImplant = found.typeKey;
+  }
+
+  // Restore previously saved implant choice + adjustments + scenarios for this case
+  const savedImplantState = loadImplantState();
+  if (savedImplantState) {
+    if (savedImplantState.selectedImplant) state.selectedImplant = savedImplantState.selectedImplant;
+    if (savedImplantState.adjust) state.adjust = { ...state.adjust, ...savedImplantState.adjust };
+    if (Array.isArray(savedImplantState.scenarios)) {
+      // Pad/truncate to 3 slots to match state.scenarios shape
+      const restored = savedImplantState.scenarios.slice(0, 3);
+      while (restored.length < 3) restored.push(null);
+      state.scenarios = restored;
+    }
+    console.log('[Restore] Implant state:', state.selectedImplant, state.adjust);
+  }
+
+  // For pipeline cases: auto-load implant ONLY if there was a saved choice.
+  // For legacy GPS cases: load the implant from the saved planning.
+  if (savedImplantState && savedImplantState.selectedImplant) {
+    await setImplant(state.selectedImplant);
+  } else if (!isPipeline && gp) {
+    await setImplant(state.selectedImplant);
+  }
+
+  document.getElementById('viewer-placeholder').style.display = 'none';
+  setViewFn('glenoid');
+  refreshUI();
+
+  // Restore previously-saved scapula lasso edits (if any) for this case
+  restoreScapulaEdit();
+
+  if (isPipeline) {
+    showToast(`Pipeline case loaded: ${planning.patientId || planning.caseId} — select implant from sidebar`, 4000);
+  } else {
+    scheduleContactUpdate();
+  }
+} catch (e) {
+  console.log('No default planning data — waiting for import.', e.message);
+}
+
+// ── Event handlers ──
+
+// Import Case button
+document.getElementById('btn-import-folder').addEventListener('click', () => {
+  document.getElementById('folder-import').click();
+});
+
+document.getElementById('folder-import').addEventListener('change', async (e) => {
+  const files = e.target.files;
+  if (!files || !files.length) return;
+  showToast('Importing case folder...');
+  try {
+    const imported = await importCaseFolder(files);
+    await applyImportedCase(imported);
+  } catch (err) {
+    console.error(err);
+    showToast('Import error: ' + err.message, 4000);
+  }
+  e.target.value = ''; // reset for re-import
+});
+
+// Adjust controls
+document.querySelectorAll('.ctrl-btn[data-axis]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const axis = btn.dataset.axis;
+    const delta = parseFloat(btn.dataset.delta);
+    const t0 = performance.now();
+    state.adjust[axis] += delta;
+    const t1 = performance.now();
+    updateImplantPose();
+    const t2 = performance.now();
+    refreshUI();
+    const t3 = performance.now();
+    scheduleContactUpdate();
+    const t4 = performance.now();
+    saveImplantState();
+    console.log(`[PERF adjust ${axis}${delta>0?'+':''}${delta}] total=${(t4-t0).toFixed(1)}ms | updateImplantPose=${(t2-t1).toFixed(1)}ms refreshUI=${(t3-t2).toFixed(1)}ms scheduleContact=${(t4-t3).toFixed(1)}ms`);
+  });
+});
+
+// Reset
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.adjust = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+  updateImplantPose();
+  refreshUI();
+  scheduleContactUpdate();
+  saveImplantState();
+  showToast('Reset to original plan');
+});
+
+// Toggle implant
+document.getElementById('toggle-implant').addEventListener('click', (e) => {
+  state.showImplant = !state.showImplant;
+  if (implantMesh) implantMesh.visible = state.showImplant;
+  e.target.classList.toggle('active', state.showImplant);
+  e.target.textContent = state.showImplant ? 'Implant' : 'Impl. Off';
+});
+
+// Toggle transparent
+document.getElementById('toggle-transparent').addEventListener('click', (e) => {
+  state.transparent = !state.transparent;
+  setScapulaTransparent(state.transparent);
+  e.target.classList.toggle('active', state.transparent);
+  e.target.textContent = state.transparent ? 'Solid' : 'Transp.';
+});
+
+// Toggle center line
+document.getElementById('toggle-centerline').addEventListener('click', (e) => {
+  showCenterLine = !showCenterLine;
+  e.target.classList.toggle('active', showCenterLine);
+  updateCenterLine();
+});
+
+// Auto Measure button
+document.getElementById('btn-auto-measure').addEventListener('click', () => {
+  if (autoMeasureActive) {
+    clearAutoMeasure();
+  } else {
+    runAutoMeasure();
+  }
+});
+
+// Measurement tool
+document.getElementById('btn-measure').addEventListener('click', () => {
+  measureMode = !measureMode;
+  document.getElementById('btn-measure').classList.toggle('active', measureMode);
+  document.getElementById('measure-hint').style.display = measureMode ? 'block' : 'none';
+
+  if (!measureMode && measurePendingSphere) {
+    // Cancel pending first sphere
+    scene.remove(measurePendingSphere);
+    measurePendingSphere.geometry.dispose();
+    measurePendingSphere.material.dispose();
+    measurePendingSphere = null;
+  }
+  if (measureMode) {
+    document.getElementById('measure-hint').textContent = 'Click two points on the 3D model';
+  }
+
+  // Toggle orbit controls behavior — allow clicks to pass through
+  renderer.domElement.style.cursor = measureMode ? 'crosshair' : '';
+});
+
+document.getElementById('btn-clear-measures').addEventListener('click', clearAllMeasurements);
+
+// Measure click on 3D canvas — use mousedown/mouseup with drag detection
+// to distinguish measurement clicks from orbit drags (avoids double-firing)
+let measureMouseDown = null;
+renderer.domElement.addEventListener('mousedown', (e) => {
+  if (measureMode) measureMouseDown = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('mouseup', (e) => {
+  if (!measureMode || !measureMouseDown) return;
+  const dx = e.clientX - measureMouseDown.x;
+  const dy = e.clientY - measureMouseDown.y;
+  // Only treat as measurement click if mouse didn't move much (not a drag/orbit)
+  if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+    onMeasureClick(e);
+  }
+  measureMouseDown = null;
+});
+
+// Implant cards
+document.querySelectorAll('.implant-card').forEach(card => {
+  card.addEventListener('click', () => {
+    setImplant(card.dataset.implant);
+    showToast(`Selected: ${IMPLANT_TYPES[card.dataset.implant]?.label || card.dataset.implant}`);
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   Scapula Osteophyte Removal — lasso tool
+
+   Mirrors the humerus.html implementation:
+   - User clicks "Remove Osteophytes" → cursor becomes crosshair, orbit disabled
+   - Draws a freehand polygon over the viewer; on release, all triangles whose
+     centroid projects inside the polygon are removed from the scapula geometry.
+   - Each operation is pushed onto an undo stack (snapshot of position buffer
+     + cumulative removed-length).
+   - Removed triangle positions are accumulated in LOCAL frame (raw NIfTI mm),
+     base64-encoded, and persisted to localStorage so the dashboard can render
+     them as a yellow osteophyte halo.
+   ───────────────────────────────────────────────────────────────────── */
+
+// scapulaLasso and SCAPULA_EDIT_KEY are now declared at the top of the script
+// (right after `const state`) so init can reference them via restoreScapulaEdit().
+
+// Float32Array <-> Base64 (same encoding used by humerus.html)
+function _scapF32ToB64(arr) {
+  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+function _scapB64ToF32(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+// _scapulaSaveDebounce declared at top of script
+function _writeScapulaEditNow() {
+  const caseId = state.planning?.caseId;
+  if (!caseId) return;
+  try {
+    const removed = new Float32Array(scapulaLasso.removedFloats);
+    const payload = {
+      version: 1,
+      caseId,
+      side: state.planning?.side || null,
+      savedAt: new Date().toISOString(),
+      // The scapula was re-centered by subtracting this offset (NIfTI mm)
+      groupOffset: scapulaMesh ? [scapulaMesh.position.x, scapulaMesh.position.y, scapulaMesh.position.z] : null,
+      triangleCount: removed.length / 9,
+      removedB64: _scapF32ToB64(removed),
+    };
+    localStorage.setItem(SCAPULA_EDIT_KEY(caseId), JSON.stringify(payload));
+    console.log(`[Save] Scapula edit saved: ${payload.triangleCount} triangles removed`);
+  } catch (e) {
+    console.warn('[Save] scapula edit failed (quota?)', e);
+  }
+}
+function saveScapulaEdit() {
+  clearTimeout(_scapulaSaveDebounce);
+  _scapulaSaveDebounce = setTimeout(_writeScapulaEditNow, 400);
+}
+function flushScapulaSave() {
+  if (_scapulaSaveDebounce) {
+    clearTimeout(_scapulaSaveDebounce);
+    _scapulaSaveDebounce = null;
+    _writeScapulaEditNow();
+  }
+}
+
+/* Flush ALL pending debounced saves immediately. Called on page unload and
+   whenever the user clicks a navigation link in the topbar.
+
+   We also write UNCONDITIONALLY here — even if no timer is pending — so a
+   page-leave guarantees the latest in-memory state hits localStorage. This
+   protects against the case where the user navigates after the timer already
+   fired but the in-memory state was updated again afterwards. */
+function flushAllPendingSaves() {
+  console.log('[Save] Flush triggered. caseId=', state.planning?.caseId, 'implant=', state.selectedImplant, 'scapTris=', scapulaLasso.removedFloats.length / 9);
+  // Cancel any pending timers
+  if (_implantSaveDebounce) { clearTimeout(_implantSaveDebounce); _implantSaveDebounce = null; }
+  if (_scapulaSaveDebounce) { clearTimeout(_scapulaSaveDebounce); _scapulaSaveDebounce = null; }
+  // Write whatever the current in-memory state is
+  _writeImplantStateNow();
+  _writeScapulaEditNow();
+}
+
+// Catch standard page navigations + tab close
+window.addEventListener('beforeunload', flushAllPendingSaves);
+window.addEventListener('pagehide', flushAllPendingSaves);
+
+// Catch in-page nav links explicitly (more reliable than beforeunload on iOS)
+const topbarLinks = document.querySelectorAll('.topbar a[href]');
+console.log('[Save] Attaching flush handler to', topbarLinks.length, 'topbar nav links');
+topbarLinks.forEach(link => {
+  link.addEventListener('click', flushAllPendingSaves);
+});
+
+function loadScapulaEdit() {
+  const caseId = state.planning?.caseId;
+  if (!caseId) return null;
+  try {
+    const raw = localStorage.getItem(SCAPULA_EDIT_KEY(caseId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+// Find the first child Mesh inside scapulaMesh Group
+function getScapulaChildMesh() {
+  if (!scapulaMesh) return null;
+  let found = null;
+  scapulaMesh.traverse(c => { if (!found && c.isMesh) found = c; });
+  return found;
+}
+
+function pointInPolygon(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y;
+    const xj = poly[j].x, yj = poly[j].y;
+    const intersect = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function updateScapulaMeshStats() {
+  const child = getScapulaChildMesh();
+  const statsEl = document.getElementById('scapula-mesh-stats');
+  if (!statsEl) return;
+  if (!child) { statsEl.textContent = '—'; return; }
+  const triCount = child.geometry.attributes.position.count / 3;
+  const removed = scapulaLasso.removedFloats.length / 9;
+  statsEl.textContent = `${triCount.toLocaleString()} triangles · ${removed.toLocaleString()} removed`;
+}
+
+function setScapulaLassoMode(on) {
+  scapulaLasso.mode = !!on;
+  const btn = document.getElementById('btn-scapula-lasso');
+  const label = document.getElementById('btn-scapula-lasso-label');
+  btn.classList.toggle('active', scapulaLasso.mode);
+  label.textContent = scapulaLasso.mode ? 'Lasso Active (Esc to exit)' : 'Remove Osteophytes';
+  document.getElementById('viewer-container').classList.toggle('lasso-mode', scapulaLasso.mode);
+  // Disable OrbitControls while lasso is active
+  controls.enabled = !scapulaLasso.mode;
+  if (!scapulaLasso.mode) {
+    scapulaLasso.points = [];
+    scapulaLasso.drawing = false;
+    document.getElementById('scapula-lasso-svg').innerHTML = '';
+  }
+}
+
+function removeScapulaTrianglesInsideLasso() {
+  const child = getScapulaChildMesh();
+  if (!child) return 0;
+  const positions = child.geometry.attributes.position.array;
+  const triCount = positions.length / 9;
+  if (triCount === 0) return 0;
+
+  const canvasEl = renderer.domElement;
+  const rect = canvasEl.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+
+  // Polygon bbox for early-out
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of scapulaLasso.points) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  // Build view-proj matrix once. Use child's matrixWorld (includes Group offset).
+  scapulaMesh.updateMatrixWorld(true);
+  camera.updateMatrixWorld();
+  const viewProj = new THREE.Matrix4().multiplyMatrices(
+    camera.projectionMatrix,
+    camera.matrixWorldInverse
+  );
+  const meshMat = child.matrixWorld;
+
+  // Snapshot for undo BEFORE mutation
+  const snapshot = new Float32Array(positions);
+  snapshot._removedLength = scapulaLasso.removedFloats.length;
+  if (!scapulaLasso.originalPositions) {
+    scapulaLasso.originalPositions = new Float32Array(positions);
+  }
+  scapulaLasso.undoStack.push(snapshot);
+  if (scapulaLasso.undoStack.length > 50) scapulaLasso.undoStack.shift();
+
+  const c = new THREE.Vector3();
+  const keep = new Float32Array(positions.length);
+  let kIdx = 0;
+  let removedCount = 0;
+  const removedThisOp = [];
+
+  for (let t = 0; t < triCount; t++) {
+    const base = t * 9;
+    const cx = (positions[base + 0] + positions[base + 3] + positions[base + 6]) / 3;
+    const cy = (positions[base + 1] + positions[base + 4] + positions[base + 7]) / 3;
+    const cz = (positions[base + 2] + positions[base + 5] + positions[base + 8]) / 3;
+    c.set(cx, cy, cz).applyMatrix4(meshMat).applyMatrix4(viewProj);
+    const sx = ( c.x * 0.5 + 0.5) * w;
+    const sy = (-c.y * 0.5 + 0.5) * h;
+    let inside = false;
+    if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY) {
+      if (c.z > -1 && c.z < 1) {
+        inside = pointInPolygon(sx, sy, scapulaLasso.points);
+      }
+    }
+    if (inside) {
+      removedCount++;
+      for (let k = 0; k < 9; k++) removedThisOp.push(positions[base + k]);
+    } else {
+      for (let k = 0; k < 9; k++) keep[kIdx + k] = positions[base + k];
+      kIdx += 9;
+    }
+  }
+
+  if (removedCount === 0) {
+    scapulaLasso.undoStack.pop();
+    return 0;
+  }
+
+  const trimmed = keep.slice(0, kIdx);
+  child.geometry.setAttribute('position', new THREE.BufferAttribute(trimmed, 3));
+  child.geometry.deleteAttribute('normal');
+  child.geometry.computeVertexNormals();
+  child.geometry.computeBoundingBox();
+  child.geometry.computeBoundingSphere();
+  child.geometry.attributes.position.needsUpdate = true;
+
+  // Rebuild glenoid ray-mesh cache (any contact / measure / cut features will refresh it)
+  glenoidRayMesh = null;
+  backSurfaceCache = null;
+
+  for (const f of removedThisOp) scapulaLasso.removedFloats.push(f);
+  saveScapulaEdit();
+  document.getElementById('btn-scapula-undo').disabled = scapulaLasso.undoStack.length === 0;
+  updateScapulaMeshStats();
+  scheduleContactUpdate();
+  return removedCount;
+}
+
+// ── SVG drawing handlers ──
+const lassoSvg = document.getElementById('scapula-lasso-svg');
+const viewerEl = document.getElementById('viewer-container');
+
+viewerEl.addEventListener('pointerdown', (e) => {
+  if (!scapulaLasso.mode || !scapulaMesh) return;
+  if (e.button !== 0) return;
+  scapulaLasso.drawing = true;
+  scapulaLasso.points = [];
+  lassoSvg.innerHTML = '';
+  const rect = renderer.domElement.getBoundingClientRect();
+  scapulaLasso.points.push({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  e.preventDefault();
+});
+
+viewerEl.addEventListener('pointermove', (e) => {
+  if (!scapulaLasso.mode || !scapulaLasso.drawing) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const last = scapulaLasso.points[scapulaLasso.points.length - 1];
+  // Skip very-close samples
+  if (last && Math.hypot(x - last.x, y - last.y) < 2) return;
+  scapulaLasso.points.push({ x, y });
+  // Draw polyline preview
+  const pts = scapulaLasso.points.map(p => `${p.x},${p.y}`).join(' ');
+  lassoSvg.innerHTML = `<polyline points="${pts}" />`;
+});
+
+viewerEl.addEventListener('pointerup', () => {
+  if (!scapulaLasso.mode || !scapulaLasso.drawing) return;
+  scapulaLasso.drawing = false;
+  if (scapulaLasso.points.length >= 3) {
+    // Close the polygon for the visual cue
+    const pts = scapulaLasso.points.map(p => `${p.x},${p.y}`).join(' ');
+    lassoSvg.innerHTML = `<polygon points="${pts}" />`;
+    const n = removeScapulaTrianglesInsideLasso();
+    if (n > 0) showToast(`Removed ${n.toLocaleString()} triangles`);
+    else       showToast('Nothing inside lasso');
+  }
+  // Clear after a short visual delay
+  setTimeout(() => { lassoSvg.innerHTML = ''; }, 250);
+  scapulaLasso.points = [];
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && scapulaLasso.mode) setScapulaLassoMode(false);
+});
+
+// Button handlers
+document.getElementById('btn-scapula-lasso').addEventListener('click', () => {
+  if (!scapulaMesh) {
+    showToast('Load a case first');
+    return;
+  }
+  setScapulaLassoMode(!scapulaLasso.mode);
+});
+
+document.getElementById('btn-scapula-undo').addEventListener('click', () => {
+  if (scapulaLasso.undoStack.length === 0) return;
+  const child = getScapulaChildMesh();
+  if (!child) return;
+  const prev = scapulaLasso.undoStack.pop();
+  child.geometry.setAttribute('position', new THREE.BufferAttribute(prev, 3));
+  child.geometry.deleteAttribute('normal');
+  child.geometry.computeVertexNormals();
+  child.geometry.computeBoundingBox();
+  child.geometry.computeBoundingSphere();
+  child.geometry.attributes.position.needsUpdate = true;
+  if (typeof prev._removedLength === 'number') {
+    scapulaLasso.removedFloats.length = prev._removedLength;
+  }
+  glenoidRayMesh = null;
+  backSurfaceCache = null;
+  saveScapulaEdit();
+  document.getElementById('btn-scapula-undo').disabled = scapulaLasso.undoStack.length === 0;
+  updateScapulaMeshStats();
+  scheduleContactUpdate();
+  showToast('Undone');
+});
+
+document.getElementById('btn-scapula-reset').addEventListener('click', () => {
+  if (!scapulaLasso.originalPositions) {
+    showToast('Nothing to reset');
+    return;
+  }
+  if (!confirm('Reset the scapula mesh? All osteophyte removals will be lost.')) return;
+  const child = getScapulaChildMesh();
+  if (!child) return;
+  child.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(scapulaLasso.originalPositions), 3));
+  child.geometry.deleteAttribute('normal');
+  child.geometry.computeVertexNormals();
+  child.geometry.computeBoundingBox();
+  child.geometry.computeBoundingSphere();
+  child.geometry.attributes.position.needsUpdate = true;
+  scapulaLasso.undoStack = [];
+  scapulaLasso.removedFloats = [];
+  glenoidRayMesh = null;
+  backSurfaceCache = null;
+  saveScapulaEdit();
+  document.getElementById('btn-scapula-undo').disabled = true;
+  updateScapulaMeshStats();
+  scheduleContactUpdate();
+  showToast('Scapula reset');
+});
+
+// Restore previously-saved removals once scapulaMesh is loaded. Called from init().
+function restoreScapulaEdit() {
+  const child = getScapulaChildMesh();
+  if (!child) return;
+  // Snapshot the originalPositions BEFORE applying any removal
+  if (!scapulaLasso.originalPositions) {
+    scapulaLasso.originalPositions = new Float32Array(child.geometry.attributes.position.array);
+  }
+  const saved = loadScapulaEdit();
+  if (!saved || !saved.removedB64 || saved.triangleCount === 0) {
+    updateScapulaMeshStats();
+    return;
+  }
+  const removedArr = _scapB64ToF32(saved.removedB64);
+
+  // Hash-based match — local coordinates with 2-decimal precision
+  const triHash = (a, b) =>
+    `${a[b+0].toFixed(2)},${a[b+1].toFixed(2)},${a[b+2].toFixed(2)},${a[b+3].toFixed(2)},${a[b+4].toFixed(2)},${a[b+5].toFixed(2)},${a[b+6].toFixed(2)},${a[b+7].toFixed(2)},${a[b+8].toFixed(2)}`;
+  const removedSet = new Set();
+  for (let i = 0; i < removedArr.length; i += 9) removedSet.add(triHash(removedArr, i));
+
+  const positions = child.geometry.attributes.position.array;
+  const triCount = positions.length / 9;
+  const keep = new Float32Array(positions.length);
+  let kIdx = 0, matched = 0;
+  const removedFlat = [];
+  for (let t = 0; t < triCount; t++) {
+    const b = t * 9;
+    if (removedSet.has(triHash(positions, b))) {
+      matched++;
+      for (let k = 0; k < 9; k++) removedFlat.push(positions[b + k]);
+    } else {
+      for (let k = 0; k < 9; k++) keep[kIdx + k] = positions[b + k];
+      kIdx += 9;
+    }
+  }
+  console.log(`[Restore] Scapula: matched ${matched}/${removedArr.length/9} previously-removed triangles`);
+  if (matched === 0) { updateScapulaMeshStats(); return; }
+
+  child.geometry.setAttribute('position', new THREE.BufferAttribute(keep.slice(0, kIdx), 3));
+  child.geometry.deleteAttribute('normal');
+  child.geometry.computeVertexNormals();
+  child.geometry.computeBoundingBox();
+  child.geometry.computeBoundingSphere();
+  child.geometry.attributes.position.needsUpdate = true;
+  scapulaLasso.removedFloats = removedFlat;
+  glenoidRayMesh = null;
+  backSurfaceCache = null;
+  updateScapulaMeshStats();
+  showToast(`Restored ${matched.toLocaleString()} previously-removed triangles`);
+}
+
+// Save scenario
+document.getElementById('btn-save-current').addEventListener('click', () => {
+  let slot = state.scenarios.findIndex(s => !s);
+  if (slot === -1) {
+    slot = 0;
+    state.scenarios.shift();
+    state.scenarios.push(null);
+  }
+  state.scenarios[slot] = {
+    implant: state.selectedImplant,
+    adjust: { ...state.adjust }
+  };
+  refreshUI();
+  saveImplantState();
+  showToast(`Saved to slot ${slot + 1}`);
+});
+
+// Scenario load
+document.querySelectorAll('#scenarios button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const slot = parseInt(btn.dataset.slot);
+    if (state.scenarios[slot]) {
+      state.adjust = { ...state.scenarios[slot].adjust };
+      setImplant(state.scenarios[slot].implant);
+      showToast(`Scenario ${slot + 1} loaded`);
+    } else {
+      showToast(`Scenario ${slot + 1} is empty`);
+    }
+  });
+});
+
+// Export .ini
+document.getElementById('btn-export-ini').addEventListener('click', () => {
+  if (!state.planning) {
+    showToast('Import a case first', 3000);
+    return;
+  }
+  const { I2G_modified } = computeImplantToPatient();
+  const flat = matrix4ToFlat(I2G_modified);
+  const p = state.planning;
+
+  const ini = `[Case]
+caseShortId=${p.caseId}
+creatorUsername=web-planner
+
+[Infos]
+PlanningAppVersion=web-planner-1.0
+
+[DataFile]
+version=1
+
+[Planning]
+GlenoidPlate=${planningPlateFor(state.selectedImplant, p.side, p.planning.glenoidPlate)}
+Glenosphere=Standard/38
+Version=${(p.planning.version + state.adjust.retroversion).toFixed(6)}
+Inclination=${(p.planning.inclination + state.adjust.inclination).toFixed(6)}
+Rotation=${state.adjust.rotz.toFixed(6)}
+transfoFromImplantToLocalGlenoidRef=${flat.map(f => f.toFixed(15)).join(' ')}
+`;
+  const blob = new Blob([ini], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${p.caseId}_modified.ini`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('reverse.ini exported');
+});
+
+// Share
+document.getElementById('btn-share').addEventListener('click', () => {
+  if (!state.planning) {
+    showToast('Import a case first', 3000);
+    return;
+  }
+  const data = {
+    implant: state.selectedImplant,
+    adjust: state.adjust,
+    scenarios: state.scenarios
+  };
+  const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+  const url = `${location.href.split('#')[0]}#p=${encoded}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Share link copied to clipboard');
+  }).catch(() => {
+    showToast('Could not copy link');
+  });
+});
+
+// ── Feature 1: Cut Views (clipping planes in implant plane) ──
+renderer.localClippingEnabled = true;
+
+function updateCutPlane() {
+  if (!cutViewActive || !activeCutPlane || !implantMesh || !state.planning) {
+    if (scapulaMaterial) scapulaMaterial.clippingPlanes = [];
+    if (scapulaBackMesh) scapulaBackMesh.visible = false;
+    if (scapulaBackMaterial) scapulaBackMaterial.clippingPlanes = [];
+    return;
+  }
+  implantMesh.updateMatrixWorld(true);
+  const implantCenter = new THREE.Vector3(0, 0, 0).applyMatrix4(implantMesh.matrixWorld);
+
+  let planeNormal;
+  if (activeCutPlane === 'axial') {
+    planeNormal = glenoidUp.clone();
+  } else if (activeCutPlane === 'coronal') {
+    planeNormal = glenoidRight.clone();
+  } else {
+    planeNormal = glenoidNormal.clone();
+  }
+
+  const d = -planeNormal.dot(implantCenter);
+  cutClipPlane = new THREE.Plane(planeNormal, d);
+  if (scapulaMaterial) scapulaMaterial.clippingPlanes = [cutClipPlane];
+  if (scapulaBackMesh) {
+    scapulaBackMesh.visible = true;
+    scapulaBackMaterial.clippingPlanes = [cutClipPlane];
+  }
+}
+
+document.getElementById('btn-cut-view').addEventListener('click', (e) => {
+  cutViewActive = !cutViewActive;
+  e.target.classList.toggle('active', cutViewActive);
+  document.getElementById('cut-controls').style.display = cutViewActive ? 'inline-flex' : 'none';
+
+  if (cutViewActive) {
+    if (!activeCutPlane) {
+      activeCutPlane = 'axial';
+      document.querySelector('.cut-btn[data-cut="axial"]').classList.add('active');
+    }
+    updateCutPlane();
+  } else {
+    activeCutPlane = null;
+    document.querySelectorAll('.cut-btn').forEach(b => b.classList.remove('active'));
+    if (scapulaMaterial) scapulaMaterial.clippingPlanes = [];
+    if (scapulaBackMesh) scapulaBackMesh.visible = false;
+    if (scapulaBackMaterial) scapulaBackMaterial.clippingPlanes = [];
+  }
+});
+
+const CUT_VIEW_MAP = { axial: 'inferior', coronal: 'anterior', sagittal: 'lateral' };
+
+document.querySelectorAll('.cut-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const cut = btn.dataset.cut;
+    if (activeCutPlane === cut) return;
+    activeCutPlane = cut;
+    document.querySelectorAll('.cut-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateCutPlane();
+    const viewName = CUT_VIEW_MAP[cut];
+    if (viewName) setViewFn(viewName);
+  });
+});
+
+// ── Feature 2: Voice-to-text comments ──
+let speechRecognition = null;
+let isRecording = false;
+let speechLang = 'pt-BR';
+
+function renderComments() {
+  const list = document.getElementById('comments-list');
+  if (state.comments.length === 0) {
+    list.innerHTML = '<span style="color:var(--text-muted)">No comments yet.</span>';
+    return;
+  }
+  list.innerHTML = state.comments.map((c, i) => `
+    <div class="comment-item">
+      <span class="comment-time">${c.time}${c.source === 'voice' ? ' (voice)' : ''}</span>
+      ${c.text}
+      <span class="comment-delete" onclick="window.GPS.deleteComment(${i})">x</span>
+    </div>
+  `).join('');
+  saveCommentsToStorage();
+}
+
+function addComment(text, source = 'text') {
+  if (!text.trim()) return;
+  const now = new Date();
+  const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  state.comments.push({ text: text.trim(), time, source, timestamp: now.toISOString() });
+  renderComments();
+}
+
+function deleteComment(index) {
+  state.comments.splice(index, 1);
+  renderComments();
+}
+
+function saveCommentsToStorage() {
+  try {
+    const caseId = state.planning?.caseId || 'default';
+    localStorage.setItem(`schulterplan-comments-${caseId}`, JSON.stringify(state.comments));
+    localStorage.setItem('schulterplan-comments-latest', JSON.stringify({
+      caseId,
+      comments: state.comments,
+      savedAt: new Date().toISOString()
+    }));
+  } catch(e) {}
+}
+
+function loadCommentsFromStorage() {
+  try {
+    const caseId = state.planning?.caseId || 'default';
+    const saved = localStorage.getItem(`schulterplan-comments-${caseId}`);
+    if (saved) {
+      state.comments = JSON.parse(saved);
+      renderComments();
+    }
+  } catch(e) {}
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Implant selection + adjustments + scenarios — persisted per case.
+   Dashboard reads `schulterplan_implant_${caseId}` to render the same
+   implant pose the surgeon last left in this page.
+   IMPLANT_STATE_KEY and _implantSaveDebounce are declared at the top of the
+   script so init() can call saveImplantState() during its async flow.
+   ───────────────────────────────────────────────────────────────────── */
+function _writeImplantStateNow() {
+  const caseId = state.planning?.caseId;
+  if (!caseId) return;
+  try {
+    const payload = {
+      version: 1,
+      caseId,
+      side: state.planning?.side || null,
+      savedAt: new Date().toISOString(),
+      selectedImplant: state.selectedImplant,
+      adjust: { ...state.adjust },
+      scenarios: state.scenarios.map(s => s ? { implant: s.implant, adjust: { ...s.adjust } } : null),
+    };
+    localStorage.setItem(IMPLANT_STATE_KEY(caseId), JSON.stringify(payload));
+  } catch (e) {
+    console.warn('[Save] implant state failed (quota?)', e);
+  }
+}
+function saveImplantState() {
+  clearTimeout(_implantSaveDebounce);
+  _implantSaveDebounce = setTimeout(_writeImplantStateNow, 350);
+}
+function flushImplantSave() {
+  if (_implantSaveDebounce) {
+    clearTimeout(_implantSaveDebounce);
+    _implantSaveDebounce = null;
+    _writeImplantStateNow();
+  }
+}
+
+function loadImplantState() {
+  const caseId = state.planning?.caseId;
+  if (!caseId) return null;
+  try {
+    const raw = localStorage.getItem(IMPLANT_STATE_KEY(caseId));
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+document.getElementById('btn-add-comment').addEventListener('click', () => {
+  const input = document.getElementById('comment-input');
+  addComment(input.value);
+  input.value = '';
+});
+
+document.getElementById('comment-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('btn-add-comment').click();
+  }
+});
+
+// Language toggle
+document.querySelectorAll('#lang-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    speechLang = btn.dataset.lang;
+    document.querySelectorAll('#lang-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (isRecording && speechRecognition) {
+      speechRecognition.stop();
+      setTimeout(() => startRecording(), 300);
+    }
+  });
+});
+
+// Speech recognition
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function startRecording() {
+  if (!SpeechRecognitionAPI) {
+    showToast('Speech recognition not supported in this browser', 3000);
+    return;
+  }
+  speechRecognition = new SpeechRecognitionAPI();
+  speechRecognition.lang = speechLang;
+  speechRecognition.continuous = true;
+  speechRecognition.interimResults = true;
+
+  let finalTranscript = '';
+  const input = document.getElementById('comment-input');
+  const statusEl = document.getElementById('voice-status');
+
+  speechRecognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        finalTranscript += t + ' ';
+      } else {
+        interim = t;
+      }
+    }
+    input.value = finalTranscript + interim;
+  };
+
+  speechRecognition.onerror = (e) => {
+    if (e.error === 'no-speech') return;
+    console.error('Speech error:', e.error);
+    stopRecording();
+    showToast('Mic error: ' + e.error, 3000);
+  };
+
+  speechRecognition.onend = () => {
+    if (isRecording) {
+      try { speechRecognition.start(); } catch(e) {}
+    }
+  };
+
+  speechRecognition.start();
+  isRecording = true;
+  finalTranscript = input.value;
+  document.getElementById('btn-mic').classList.add('recording');
+  statusEl.textContent = 'Recording...';
+  statusEl.classList.add('recording');
+}
+
+function stopRecording() {
+  if (speechRecognition) {
+    isRecording = false;
+    speechRecognition.stop();
+    speechRecognition = null;
+  }
+  document.getElementById('btn-mic').classList.remove('recording');
+  const statusEl = document.getElementById('voice-status');
+  statusEl.textContent = '';
+  statusEl.classList.remove('recording');
+}
+
+document.getElementById('btn-mic').addEventListener('click', () => {
+  if (isRecording) {
+    stopRecording();
+    const input = document.getElementById('comment-input');
+    if (input.value.trim()) {
+      addComment(input.value, 'voice');
+      input.value = '';
+    }
+  } else {
+    startRecording();
+  }
+});
+
+// Load saved comments when case loads
+const _origApplyImportedCase = typeof applyImportedCase === 'function' ? applyImportedCase : null;
+setTimeout(() => loadCommentsFromStorage(), 1500);
+
+// Expose for inline onclick handlers
+window.GPS = { setView: setViewFn, setImplant, refreshUI, state, deleteComment };
+</script>
+
+</body>
+</html>

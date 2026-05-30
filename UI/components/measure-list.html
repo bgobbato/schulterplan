@@ -1,0 +1,33 @@
+<!-- ── Measurement Tool list ──
+     Tool header (toggle + clear) and a list of color-coded items.    -->
+
+<div class="measure-tool-section">
+  <div class="measure-tool-header">
+    <button class="btn btn-ghost btn-sm">📏 Measure</button>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px">Clear All</button>
+  </div>
+
+  <!-- Live hint while in measure mode (set display:block via JS) -->
+  <div class="measure-hint" style="display:none">Click two points on the 3D model</div>
+
+  <div class="measure-list">
+    <div class="measure-item">
+      <span class="measure-dot" style="background:#00ccff"></span>
+      <span class="measure-label">Inferior</span>
+      <span class="measure-value">16.1 mm</span>
+      <span class="measure-delete" role="button" aria-label="Delete measurement">✕</span>
+    </div>
+    <div class="measure-item">
+      <span class="measure-dot" style="background:#ff6644"></span>
+      <span class="measure-label">Anterior</span>
+      <span class="measure-value">5.4 mm</span>
+      <span class="measure-delete" role="button" aria-label="Delete measurement">✕</span>
+    </div>
+    <div class="measure-item">
+      <span class="measure-dot" style="background:#ffcc00"></span>
+      <span class="measure-label">Custom #3</span>
+      <span class="measure-value">22.8 mm</span>
+      <span class="measure-delete" role="button" aria-label="Delete measurement">✕</span>
+    </div>
+  </div>
+</div>

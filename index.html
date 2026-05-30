@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>GPS Web Planner</title>
+<style>
+  :root {
+    --primary: #006860;
+    --primary-dark: #004A44;
+    --primary-light: #e0f0ed;
+    --bg: #f2f5f4;
+    --panel: #ffffff;
+    --border: #d4e5e2;
+    --border-hover: #006860;
+    --text: #1a2e2e;
+    --text-secondary: #5a7a77;
+    --accent: #D4A843;
+    --accent-light: #faf3e0;
+    --toolbar: #4a7a73;
+    --toolbar-dark: #3a6a63;
+    --shadow-sm: 0 1px 3px rgba(0,72,68,0.08);
+    --shadow-md: 0 4px 12px rgba(0,72,68,0.1);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 250px 1fr 270px;
+    grid-template-rows: 54px 1fr;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    background: linear-gradient(135deg, var(--toolbar) 0%, var(--toolbar-dark) 100%);
+    border-bottom: none;
+    gap: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 10;
+  }
+  .topbar h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    color: #ffffff;
+    flex: 0 0 auto;
+    letter-spacing: 0.3px;
+  }
+  .topbar .spacer { flex: 1; }
+
+  /* ── Buttons ── */
+  .btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    letter-spacing: 0.2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:hover {
+    background: var(--primary-dark);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn.secondary {
+    background: var(--panel);
+    color: var(--primary);
+    border: 1.5px solid var(--border);
+  }
+  .btn.secondary:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn.toggle {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    border: 1.5px solid rgba(255,255,255,0.25);
+  }
+  .btn.toggle:hover {
+    background: rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+  }
+  .btn.toggle.active {
+    background: var(--accent);
+    color: #1a1a1a;
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(212,168,67,0.3);
+  }
+
+  /* ── View Buttons ── */
+  .views-group {
+    display: flex;
+    gap: 4px;
+    margin-right: 8px;
+    background: rgba(0,0,0,0.12);
+    border-radius: var(--radius);
+    padding: 3px;
+  }
+  .view-btn {
+    background: transparent;
+    color: rgba(255,255,255,0.75);
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+    transition: all var(--transition);
+    min-width: 52px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .view-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+  .view-btn.active {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+  }
+  .view-btn span { margin-top: 3px; }
+
+  /* ── Comments ── */
+  .comment {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    background: var(--bg);
+  }
+  .comment-meta {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+  .comment-text { white-space: pre-wrap; word-break: break-word; }
+  .comment-form { margin-top: 10px; }
+  .comment-form textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+    transition: border-color var(--transition);
+    outline: none;
+  }
+  .comment-form textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,104,96,0.1);
+  }
+  .comment-form .btn { width: 100%; padding: 6px; font-size: 12px; }
+
+  /* ── Credits ── */
+  .credits {
+    position: fixed;
+    bottom: 8px;
+    right: 14px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    pointer-events: none;
+    user-select: none;
+    text-align: right;
+    line-height: 1.4;
+    z-index: 10;
+  }
+
+  /* ── Sidebars ── */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 18px;
+    overflow-y: auto;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  .sidebar.right {
+    border-right: none;
+    border-left: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 18px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--primary-light);
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── Measurements ── */
+  .measure {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+    color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .measure:last-of-type { border-bottom: none; }
+  .measure .val {
+    font-weight: 700;
+    color: var(--primary-dark);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Implant Cards ── */
+  .implant-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .implant-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 6px 8px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--panel);
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.15;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .implant-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  .implant-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-light);
+    color: var(--primary-dark);
+    box-shadow: 0 0 0 3px rgba(212,168,67,0.15), var(--shadow-sm);
+  }
+  .implant-card.selected .icon {
+    color: var(--accent);
+  }
+  .implant-card .icon {
+    width: 38px;
+    height: 44px;
+    color: #b6c4c2;
+    margin-bottom: 5px;
+    transition: color var(--transition);
+  }
+
+  /* ── 3D Viewer ── */
+  .viewer {
+    position: relative;
+    background: #2e2e2e;
+  }
+  #canvas { display: block; width: 100%; height: 100%; }
+
+  /* ── Control Buttons ── */
+  .control-row {
+    display: grid;
+    grid-template-columns: 34px 1fr 34px;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+  .ctrl-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    height: 34px;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ctrl-btn:hover {
+    background: var(--primary-dark);
+    box-shadow: var(--shadow-sm);
+    transform: scale(1.05);
+  }
+  .ctrl-btn:active { transform: scale(0.95); }
+  .ctrl-label {
+    text-align: center;
+    font-size: 12px;
+  }
+  .ctrl-label .val {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .ctrl-label .name {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  /* ── Arrow Cross ── */
+  .arrows {
+    display: grid;
+    grid-template-columns: 34px 34px 34px;
+    grid-template-rows: 34px 34px 34px;
+    gap: 5px;
+    justify-content: center;
+    margin: 14px auto;
+  }
+  .arrows .ctrl-btn { padding: 0; height: 34px; width: 34px; }
+  .arrows .empty { visibility: hidden; }
+
+  /* ── Scenarios ── */
+  .scenarios {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .scenarios .btn {
+    width: 100%;
+    text-align: left;
+    background: var(--panel);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    font-size: 11px;
+    padding: 8px 12px;
+    font-weight: 500;
+  }
+  .scenarios .btn.has-data {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--primary-dark);
+    font-weight: 600;
+  }
+  .scenarios .btn:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── Footer Actions ── */
+  .footer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--primary-dark);
+    color: white;
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Share Modal ── */
+  .share-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+  }
+  .share-overlay.open { display: flex; }
+  .share-modal {
+    background: var(--panel);
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 32px 36px 26px;
+    min-width: 340px;
+    max-width: 420px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+  .share-modal h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .share-modal p {
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .share-modal .share-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .share-modal .share-btn {
+    flex: 1;
+    padding: 11px 18px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    letter-spacing: 0.3px;
+  }
+  .share-modal .share-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  .share-btn.edit {
+    background: var(--primary);
+    color: white;
+  }
+  .share-btn.view {
+    background: var(--primary-dark);
+    color: white;
+  }
+  .share-modal .share-result {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    min-height: 18px;
+  }
+
+  /* ── Import Button (topbar) ── */
+  .topbar .btn.secondary {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.3);
+  }
+  .topbar .btn.secondary:hover {
+    background: rgba(255,255,255,0.22);
+    border-color: rgba(255,255,255,0.5);
+  }
+
+  /* =====================================================
+     MOBILE RESPONSIVE (max-width: 768px)
+     ===================================================== */
+  @media (max-width: 768px) {
+    body { overflow: auto; }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      gap: 6px;
+      height: auto;
+    }
+    .topbar h1 { font-size: 14px; }
+    .topbar .spacer { display: none; }
+    #case-info { font-size: 11px; flex: 1 1 100%; order: 10; }
+
+    .views-group {
+      order: 2;
+      margin-right: 0;
+      gap: 3px;
+      padding: 2px;
+    }
+    .view-btn {
+      min-width: 48px;
+      font-size: 8px;
+      padding: 4px 6px;
+    }
+    .view-btn svg { width: 18px; height: 18px; }
+
+    .btn {
+      padding: 7px 10px;
+      font-size: 11px;
+    }
+    #toggle-implant, #toggle-transparent, #toggle-osteo {
+      padding: 6px 8px;
+      font-size: 10px;
+    }
+
+    .viewer {
+      order: 1;
+      width: 100%;
+      height: 55vw;
+      min-height: 240px;
+      max-height: 380px;
+      flex-shrink: 0;
+    }
+    #canvas { width: 100%; height: 100%; }
+
+    .sidebar.right {
+      order: 2;
+      width: 100%;
+      border-left: none;
+      border-top: 2px solid var(--border);
+      padding: 14px 16px;
+    }
+
+    .sidebar.left {
+      order: 3;
+      width: 100%;
+      border-right: none;
+      border-top: 2px solid var(--border);
+      padding: 14px 16px;
+    }
+
+    .ctrl-btn {
+      height: 44px;
+      font-size: 18px;
+      border-radius: var(--radius);
+    }
+    .control-row {
+      grid-template-columns: 44px 1fr 44px;
+      margin-bottom: 10px;
+    }
+    .ctrl-label .val { font-size: 20px; }
+    .ctrl-label .name { font-size: 10px; }
+
+    .arrows {
+      grid-template-columns: 44px 44px 44px;
+      grid-template-rows: 44px 44px 44px;
+      gap: 6px;
+      margin: 14px auto;
+    }
+    .arrows .ctrl-btn { width: 44px; height: 44px; font-size: 20px; }
+
+    .implant-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .implant-card { padding: 6px 2px 4px; font-size: 8px; }
+    .implant-card .icon { width: 32px; height: 38px; }
+
+    .scenarios {
+      flex-direction: row;
+      gap: 6px;
+    }
+    .scenarios .btn {
+      flex: 1;
+      text-align: center;
+      font-size: 10px;
+      padding: 8px 4px;
+    }
+
+    .footer-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .comment-form textarea { height: 60px; }
+    .credits { font-size: 9px; }
+
+    .share-modal {
+      min-width: unset;
+      width: 90vw;
+      padding: 22px 18px 16px;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .implant-grid { grid-template-columns: 1fr 1fr; }
+    .footer-actions { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <img src="data/logo_implantcast.png" alt="implantcast" style="height:36px;margin-right:4px">
+    <h1>GPS Web Planner</h1>
+    <span style="font-size:12px;color:#d0e8e4" id="case-info">—</span>
+    <a href="humerus.html" style="text-decoration:none;font-size:12px;font-weight:600;color:#17c5b0;background:rgba(23,197,176,0.12);padding:6px 12px;border-radius:8px;border:1px solid rgba(23,197,176,0.25);margin-left:8px" title="Open Humerus planning">
+      Humerus →
+    </a>
+    <div class="spacer"></div>
+    <div class="views-group">
+      <button class="view-btn" id="view-anterior" title="Anterior view">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2L8 6v6l-2 2v6l4-2 2 2 2-2 4 2v-6l-2-2V6l-4-4z"/></svg>
+        <span>Anterior</span>
+      </button>
+      <button class="view-btn" id="view-glenoid" title="Glenoid face view">
+        <svg viewBox="0 0 24 24" width="22" height="22"><ellipse cx="12" cy="12" rx="6" ry="9" fill="currentColor"/></svg>
+        <span>Glenoid</span>
+      </button>
+      <button class="view-btn" id="view-lateral" title="Lateral view">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M14 2v6l-3 3v6l3 5h-4l-2-5v-6l2-3V2z"/></svg>
+        <span>Lateral</span>
+      </button>
+      <button class="view-btn" id="view-inferior" title="Inferior view">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 22l-4-4h3V10H8l4-4 4 4h-3v8h3z"/></svg>
+        <span>Inferior</span>
+      </button>
+    </div>
+    <button class="btn toggle active" id="toggle-implant">Show Implant</button>
+    <button class="btn toggle" id="toggle-transparent">Transparent Bone</button>
+    <button class="btn toggle" id="toggle-osteo" style="display:none">Remove Osteophytes</button>
+    <button class="btn secondary" id="btn-import-folder">Import Case Folder</button>
+    <input type="file" id="folder-import" webkitdirectory directory multiple style="display:none">
+    <input type="file" id="file-import" accept=".json,.ini" style="display:none">
+  </div>
+
+  <div class="sidebar left">
+    <div class="section-title">Pre-Op Measurements</div>
+    <div class="measure"><span>Retroversion:</span><span class="val" id="m-retro">—</span></div>
+    <div class="measure"><span>Inferior Incl.:</span><span class="val" id="m-incl">—</span></div>
+    <div class="measure"><span>Pre-op Sublux.:</span><span class="val" id="m-sublux">—</span></div>
+
+    <div class="section-title">Implant Selection</div>
+    <div class="implant-subtitle" style="font-size:10px;color:var(--text-secondary);margin-bottom:6px;font-weight:600;letter-spacing:0.3px">Glenoid Cementless Anatomical</div>
+    <div class="implant-grid" id="implant-grid">
+      <!-- Size 2 Short — lateral view: flat plate + short cylindrical peg with 3 holes -->
+      <div class="implant-card" data-implant="ANAT_2_SHORT">
+        <svg class="icon" viewBox="0 0 70 52">
+          <defs>
+            <linearGradient id="g-plate" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="currentColor" stop-opacity="0.55"/>
+              <stop offset="40%" stop-color="currentColor" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="currentColor" stop-opacity="0.7"/>
+            </linearGradient>
+            <linearGradient id="g-peg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="currentColor" stop-opacity="0.7"/>
+              <stop offset="50%" stop-color="currentColor" stop-opacity="1"/>
+              <stop offset="100%" stop-color="currentColor" stop-opacity="0.65"/>
+            </linearGradient>
+          </defs>
+          <!-- Baseplate — flat disc seen edge-on, oval shape with rim -->
+          <rect x="2" y="4" width="10" height="44" rx="3" fill="url(#g-plate)"/>
+          <!-- Rim highlight -->
+          <rect x="2" y="4" width="3" height="44" rx="1.5" fill="currentColor" opacity="0.35"/>
+          <line x1="12" y1="6" x2="12" y2="46" stroke="currentColor" stroke-width="0.8" opacity="0.3"/>
+          <!-- Backplate texture bumps at junction -->
+          <circle cx="14" cy="16" r="2.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="14" cy="26" r="2.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="14" cy="36" r="2.5" fill="currentColor" opacity="0.5"/>
+          <!-- Peg — straight cylinder, short -->
+          <rect x="14" y="16" width="34" height="20" rx="2" fill="url(#g-peg)"/>
+          <!-- Peg tip rounded -->
+          <path d="M48,16 Q52,26 48,36" fill="currentColor" opacity="0.6"/>
+          <!-- Screw holes through peg -->
+          <circle cx="24" cy="26" r="2.5" fill="white" opacity="0.55"/>
+          <circle cx="24" cy="26" r="1.5" fill="currentColor" opacity="0.3"/>
+          <circle cx="33" cy="26" r="2.3" fill="white" opacity="0.5"/>
+          <circle cx="33" cy="26" r="1.3" fill="currentColor" opacity="0.25"/>
+          <circle cx="42" cy="26" r="2" fill="white" opacity="0.4"/>
+          <circle cx="42" cy="26" r="1.1" fill="currentColor" opacity="0.2"/>
+        </svg>
+        Size 2<br>Short
+      </div>
+      <!-- Size 2 Long — lateral view: flat plate + long cylindrical peg with 4 holes -->
+      <div class="implant-card" data-implant="ANAT_2_LONG">
+        <svg class="icon" viewBox="0 0 70 52">
+          <!-- Baseplate -->
+          <rect x="2" y="4" width="10" height="44" rx="3" fill="url(#g-plate)"/>
+          <rect x="2" y="4" width="3" height="44" rx="1.5" fill="currentColor" opacity="0.35"/>
+          <line x1="12" y1="6" x2="12" y2="46" stroke="currentColor" stroke-width="0.8" opacity="0.3"/>
+          <!-- Junction bumps -->
+          <circle cx="14" cy="16" r="2.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="14" cy="26" r="2.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="14" cy="36" r="2.5" fill="currentColor" opacity="0.5"/>
+          <!-- Peg — long cylinder -->
+          <rect x="14" y="16" width="46" height="20" rx="2" fill="url(#g-peg)"/>
+          <path d="M60,16 Q64,26 60,36" fill="currentColor" opacity="0.6"/>
+          <!-- 4 screw holes -->
+          <circle cx="22" cy="26" r="2.3" fill="white" opacity="0.55"/>
+          <circle cx="22" cy="26" r="1.3" fill="currentColor" opacity="0.3"/>
+          <circle cx="31" cy="26" r="2.2" fill="white" opacity="0.5"/>
+          <circle cx="31" cy="26" r="1.2" fill="currentColor" opacity="0.25"/>
+          <circle cx="40" cy="26" r="2" fill="white" opacity="0.45"/>
+          <circle cx="40" cy="26" r="1.1" fill="currentColor" opacity="0.22"/>
+          <circle cx="49" cy="26" r="1.8" fill="white" opacity="0.38"/>
+          <circle cx="49" cy="26" r="1" fill="currentColor" opacity="0.18"/>
+        </svg>
+        Size 2<br>Long
+      </div>
+      <!-- Size 3 Short — larger plate + short peg with 3 holes -->
+      <div class="implant-card" data-implant="ANAT_3_SHORT">
+        <svg class="icon" viewBox="0 0 70 56">
+          <!-- Baseplate — taller (larger size) -->
+          <rect x="2" y="2" width="11" height="52" rx="3" fill="url(#g-plate)"/>
+          <rect x="2" y="2" width="3.5" height="52" rx="1.5" fill="currentColor" opacity="0.35"/>
+          <line x1="13" y1="4" x2="13" y2="54" stroke="currentColor" stroke-width="0.8" opacity="0.3"/>
+          <!-- Junction bumps -->
+          <circle cx="15" cy="17" r="2.8" fill="currentColor" opacity="0.5"/>
+          <circle cx="15" cy="28" r="2.8" fill="currentColor" opacity="0.5"/>
+          <circle cx="15" cy="39" r="2.8" fill="currentColor" opacity="0.5"/>
+          <!-- Peg — short -->
+          <rect x="15" y="17" width="34" height="22" rx="2" fill="url(#g-peg)"/>
+          <path d="M49,17 Q53,28 49,39" fill="currentColor" opacity="0.6"/>
+          <!-- 3 screw holes -->
+          <circle cx="25" cy="28" r="2.6" fill="white" opacity="0.55"/>
+          <circle cx="25" cy="28" r="1.5" fill="currentColor" opacity="0.3"/>
+          <circle cx="34" cy="28" r="2.4" fill="white" opacity="0.5"/>
+          <circle cx="34" cy="28" r="1.4" fill="currentColor" opacity="0.25"/>
+          <circle cx="43" cy="28" r="2.1" fill="white" opacity="0.4"/>
+          <circle cx="43" cy="28" r="1.2" fill="currentColor" opacity="0.2"/>
+        </svg>
+        Size 3<br>Short
+      </div>
+      <!-- Size 3 Long — larger plate + long peg with 4 holes -->
+      <div class="implant-card" data-implant="ANAT_3_LONG">
+        <svg class="icon" viewBox="0 0 70 56">
+          <!-- Baseplate — taller -->
+          <rect x="2" y="2" width="11" height="52" rx="3" fill="url(#g-plate)"/>
+          <rect x="2" y="2" width="3.5" height="52" rx="1.5" fill="currentColor" opacity="0.35"/>
+          <line x1="13" y1="4" x2="13" y2="54" stroke="currentColor" stroke-width="0.8" opacity="0.3"/>
+          <!-- Junction bumps -->
+          <circle cx="15" cy="17" r="2.8" fill="currentColor" opacity="0.5"/>
+          <circle cx="15" cy="28" r="2.8" fill="currentColor" opacity="0.5"/>
+          <circle cx="15" cy="39" r="2.8" fill="currentColor" opacity="0.5"/>
+          <!-- Peg — long -->
+          <rect x="15" y="17" width="46" height="22" rx="2" fill="url(#g-peg)"/>
+          <path d="M61,17 Q65,28 61,39" fill="currentColor" opacity="0.6"/>
+          <!-- 4 screw holes -->
+          <circle cx="23" cy="28" r="2.5" fill="white" opacity="0.55"/>
+          <circle cx="23" cy="28" r="1.4" fill="currentColor" opacity="0.3"/>
+          <circle cx="32" cy="28" r="2.3" fill="white" opacity="0.5"/>
+          <circle cx="32" cy="28" r="1.3" fill="currentColor" opacity="0.25"/>
+          <circle cx="41" cy="28" r="2.1" fill="white" opacity="0.45"/>
+          <circle cx="41" cy="28" r="1.2" fill="currentColor" opacity="0.22"/>
+          <circle cx="50" cy="28" r="1.9" fill="white" opacity="0.38"/>
+          <circle cx="50" cy="28" r="1" fill="currentColor" opacity="0.18"/>
+        </svg>
+        Size 3<br>Long
+      </div>
+    </div>
+
+    <div class="implant-subtitle" style="font-size:10px;color:var(--text-secondary);margin:10px 0 6px;font-weight:600;letter-spacing:0.3px">Glenoid Cementless Round</div>
+    <div class="implant-grid">
+      <!-- Round Size 3 — front view: circular disc with 4 screw holes + central peg hole -->
+      <div class="implant-card" data-implant="ROUND_3">
+        <svg class="icon" viewBox="0 0 56 56">
+          <!-- Outer rim -->
+          <circle cx="28" cy="28" r="26" fill="currentColor" opacity="0.3"/>
+          <!-- Main disc face -->
+          <circle cx="28" cy="28" r="23" fill="url(#g-plate)"/>
+          <!-- Inner ring highlight -->
+          <circle cx="28" cy="28" r="23" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.25"/>
+          <!-- Central peg hole with concentric rings -->
+          <circle cx="28" cy="28" r="4.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="28" cy="28" r="3" fill="white" opacity="0.4"/>
+          <circle cx="28" cy="28" r="1.5" fill="currentColor" opacity="0.5"/>
+          <!-- 4 screw holes in cross pattern -->
+          <circle cx="28" cy="12" r="3.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="28" cy="12" r="2.2" fill="white" opacity="0.6"/>
+          <circle cx="12" cy="28" r="3.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="12" cy="28" r="2.2" fill="white" opacity="0.6"/>
+          <circle cx="44" cy="28" r="3.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="44" cy="28" r="2.2" fill="white" opacity="0.6"/>
+          <circle cx="28" cy="44" r="3.5" fill="currentColor" opacity="0.5"/>
+          <circle cx="28" cy="44" r="2.2" fill="white" opacity="0.6"/>
+        </svg>
+        Size 3<br>Round
+      </div>
+      <div class="implant-card" data-implant="TECHIMPORT">
+        <svg class="icon" viewBox="0 0 56 56">
+          <circle cx="28" cy="28" r="22" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.4"/>
+          <path d="M28,16 L28,36 M22,30 L28,36 L34,30" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+          <line x1="18" y1="40" x2="38" y2="40" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+        TECH<br>IMPORT
+      </div>
+    </div>
+
+    <div class="section-title">Saved Scenarios</div>
+    <div class="scenarios" id="scenarios">
+      <button class="btn" data-slot="0">Scenario 1: empty</button>
+      <button class="btn" data-slot="1">Scenario 2: empty</button>
+      <button class="btn" data-slot="2">Scenario 3: empty</button>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn" id="btn-save-current">Save Current Scenario</button>
+      <button class="btn secondary" id="btn-save-server">Save to Server</button>
+      <button class="btn secondary" id="btn-export-ini">Export .ini</button>
+      <button class="btn secondary" id="btn-share">Share (link)</button>
+    </div>
+  </div>
+
+  <div class="viewer">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="sidebar right">
+    <div class="section-title">Implant Position</div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" data-axis="retroversion" data-delta="-1">←</button>
+      <div class="ctrl-label">
+        <span class="name">Retroversion</span>
+        <span class="val" id="v-retro">0°</span>
+      </div>
+      <button class="ctrl-btn" data-axis="retroversion" data-delta="1">→</button>
+    </div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" data-axis="inclination" data-delta="-1">↓</button>
+      <div class="ctrl-label">
+        <span class="name">Inferior Incl.</span>
+        <span class="val" id="v-incl">0°</span>
+      </div>
+      <button class="ctrl-btn" data-axis="inclination" data-delta="1">↑</button>
+    </div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" data-axis="depth" data-delta="-1">−</button>
+      <div class="ctrl-label">
+        <span class="name">Depth</span>
+        <span class="val" id="v-depth">0mm</span>
+      </div>
+      <button class="ctrl-btn" data-axis="depth" data-delta="1">+</button>
+    </div>
+
+    <div class="section-title">Translation</div>
+
+    <div class="arrows">
+      <div class="empty"></div>
+      <button class="ctrl-btn" data-axis="ty" data-delta="1">↑</button>
+      <div class="empty"></div>
+
+      <button class="ctrl-btn" data-axis="tx" data-delta="-1">←</button>
+      <div class="empty"></div>
+      <button class="ctrl-btn" data-axis="tx" data-delta="1">→</button>
+
+      <button class="ctrl-btn" data-axis="rotz" data-delta="-1">↺</button>
+      <button class="ctrl-btn" data-axis="ty" data-delta="-1">↓</button>
+      <button class="ctrl-btn" data-axis="rotz" data-delta="1">↻</button>
+    </div>
+
+    <div class="measure"><span>SI (Y):</span><span class="val" id="v-ty">0mm</span></div>
+    <div class="measure"><span>AP (X):</span><span class="val" id="v-tx">0mm</span></div>
+    <div class="measure"><span>Axial Rotation:</span><span class="val" id="v-rotz">0°</span></div>
+
+    <div class="footer-actions">
+      <button class="btn secondary" id="btn-reset">Reset</button>
+    </div>
+
+    <div class="section-title">Comments</div>
+    <div id="comments-list">
+      <div style="font-size:11px;color:var(--muted)">No comments yet.</div>
+    </div>
+    <div class="comment-form">
+      <textarea id="comment-input" rows="2"
+        placeholder="Add a comment..."></textarea>
+      <button class="btn secondary" id="btn-add-comment">Post</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="share-overlay" id="share-overlay">
+  <div class="share-modal">
+    <h3>Share this case</h3>
+    <p>Choose which link to copy to clipboard:</p>
+    <div class="share-buttons">
+      <button class="share-btn edit" id="share-edit">EDIT</button>
+      <button class="share-btn view" id="share-view">VIEW-ONLY</button>
+    </div>
+    <div class="share-result" id="share-result"></div>
+  </div>
+</div>
+
+<div class="credits" style="color:#999">
+  implantcast GPS Web Planner<br>
+  Created by Dr. Bruno Gobbato
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+// ----- State -----
+const state = {
+  planning: null,
+  selectedImplant: 'ANAT_2_SHORT',
+  // Adjustments in glenoid local frame
+  // Rotations (deg) and translations (mm) ON TOP of the original planning matrix
+  adjust: { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 },
+  scenarios: [null, null, null],
+  showImplant: true,
+  transparent: false,
+  serverCaseId: null,        // when set, edits sync to the server
+  scapulaSources: null,      // raw ArrayBuffers of imported .bin meshes
+  comments: []               // mirrored from the server when loaded
+};
+
+function refreshComments() {
+  const el = document.getElementById('comments-list');
+  if (!el) return;
+  if (!state.comments.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted)">No comments yet.</div>';
+    return;
+  }
+  el.innerHTML = state.comments.slice(-20).map(c => `
+    <div class="comment">
+      <div class="comment-meta"><b>${escapeHtml(c.author || 'Anonymous')}</b>
+        <span>${new Date((c.createdAt || 0) * 1000).toLocaleString()}</span>
+      </div>
+      <div class="comment-text">${escapeHtml(c.text)}</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, ch =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+}
+
+// Update UI affordances based on whether we're in view-only or edit mode.
+// View-only = the case is on the server but we don't have the edit token.
+function refreshAccessMode() {
+  const onServer = !!state.serverCaseId;
+  const canEdit  = !onServer || !!currentEditToken();
+
+  // Save to Server: relabel based on current state
+  const saveBtn = document.getElementById('btn-save-server');
+  if (!onServer) {
+    saveBtn.textContent = 'Save to Server';
+    saveBtn.disabled = false;
+  } else if (canEdit) {
+    saveBtn.textContent = 'Sync Scenarios';
+  } else {
+    saveBtn.textContent = 'Read-only';
+    saveBtn.disabled = true;
+  }
+
+  // Disable mutating controls in view-only mode
+  const muteSelectors = [
+    '.ctrl-btn[data-axis]', '#btn-reset', '#btn-save-current',
+    '#toggle-osteo', '.implant-card'
+  ];
+  muteSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.pointerEvents = canEdit ? '' : 'none';
+      el.style.opacity = canEdit ? '' : '0.45';
+    });
+  });
+
+  // Comment form is allowed in view-only too (anyone can comment)
+}
+
+// ----- Three.js setup -----
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x383838);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
+camera.position.set(200, 200, 300);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl1 = new THREE.DirectionalLight(0xffffff, 0.7);
+dl1.position.set(1, 1, 1);
+scene.add(dl1);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.3);
+dl2.position.set(-1, -1, -1);
+scene.add(dl2);
+
+let scapulaMesh = null;
+let scapulaMaterial = null;
+let implantMesh = null;
+const implantCache = {};
+
+// Glenoid frame in patient coords (computed from planning data)
+let glenoidCenter = new THREE.Vector3();
+let glenoidNormal = new THREE.Vector3(); // glenoid local +Z direction
+let glenoidUp = new THREE.Vector3();     // glenoid local +Y direction (sup-inf)
+let glenoidRight = new THREE.Vector3();  // glenoid local +X direction (ant-post)
+let viewDistance = 200;
+
+// ----- Math helpers -----
+function flatToMatrix4(arr) {
+  const m = new THREE.Matrix4();
+  m.set(
+    arr[0], arr[1], arr[2], arr[3],
+    arr[4], arr[5], arr[6], arr[7],
+    arr[8], arr[9], arr[10], arr[11],
+    arr[12], arr[13], arr[14], arr[15]
+  );
+  return m;
+}
+
+function matrix4ToFlat(m) {
+  // Returns row-major 16 floats (matches the .ini format)
+  const e = m.elements; // Three.js stores column-major
+  return [
+    e[0], e[4], e[8], e[12],
+    e[1], e[5], e[9], e[13],
+    e[2], e[6], e[10], e[14],
+    e[3], e[7], e[11], e[15]
+  ];
+}
+
+function buildAdjustMatrix(adj) {
+  // adj rotations are around the glenoid local axes
+  // Order: retroversion (Y), inclination (X), rotz (Z), then translation
+  const rx = THREE.MathUtils.degToRad(adj.inclination);
+  const ry = THREE.MathUtils.degToRad(adj.retroversion);
+  const rz = THREE.MathUtils.degToRad(adj.rotz);
+
+  const m = new THREE.Matrix4();
+  m.makeRotationFromEuler(new THREE.Euler(rx, ry, rz, 'XYZ'));
+  m.setPosition(adj.tx, adj.ty, adj.depth);
+  return m;
+}
+
+function computeImplantToPatient() {
+  const p = state.planning.planning;
+  const P2G = flatToMatrix4(p.patientRefToGlenoidRef);
+  const I2G_orig = flatToMatrix4(p.transfoFromImplantToLocalGlenoidRef);
+  const adjustM = buildAdjustMatrix(state.adjust);
+  // adjust applied in glenoid local frame on top of original implant pose
+  const I2G_modified = new THREE.Matrix4().multiplyMatrices(adjustM, I2G_orig);
+  const I2P = new THREE.Matrix4().multiplyMatrices(P2G, I2G_modified);
+  return { I2P, I2G_modified };
+}
+
+// ----- Loaders -----
+const objLoader = new OBJLoader();
+const stlLoader = new STLLoader();
+
+function loadScapula(url) {
+  return new Promise((resolve, reject) => {
+    objLoader.load(url, obj => {
+      scapulaMaterial = new THREE.MeshPhongMaterial({
+        color: 0xe6dbc7,
+        side: THREE.DoubleSide,
+        transparent: false,
+        opacity: 1.0,
+        depthWrite: true
+      });
+      obj.traverse(c => { if (c.isMesh) c.material = scapulaMaterial; });
+      resolve(obj);
+    }, undefined, reject);
+  });
+}
+
+function setScapulaTransparent(transparent) {
+  if (!scapulaMaterial) return;
+  scapulaMaterial.transparent = transparent;
+  scapulaMaterial.opacity = transparent ? 0.5 : 1.0;
+  scapulaMaterial.depthWrite = !transparent;
+  scapulaMaterial.needsUpdate = true;
+}
+
+// ── Implant coordinate corrections ──
+// Implantcast STLs: peg in +X → center + Ry(90°) → peg in -Z (GPS convention)
+// TechImport STL: offset from origin → center only
+const IMPLANT_CORRECTIONS = {
+  'data/glenoid_anat_2_short.stl': { center: [12.0, 14.1, 11.0], rot: 'ry90' },
+  'data/glenoid_anat_2_long.stl':  { center: [14.5,  0.0,  0.0], rot: 'ry90' },
+  'data/glenoid_anat_3_short.stl': { center: [13.5,  0.0,  0.0], rot: 'ry90' },
+  'data/glenoid_anat_3_long.stl':  { center: [16.0,  0.0,  0.0], rot: 'ry90' },
+  'data/glenoid_round_3.stl':      { center: [14.5,  0.0,  0.0], rot: 'ry90' },
+  'data/techimport.stl':           { center: [12.5, 12.5,  8.0], rot: 'rx180' },
+};
+
+function applyImplantCorrection(geom, url) {
+  const corr = IMPLANT_CORRECTIONS[url];
+  if (!corr) return;
+  const tx = -corr.center[0], ty = -corr.center[1], tz = -corr.center[2];
+  const positions = geom.attributes.position.array;
+  const normals = geom.attributes.normal ? geom.attributes.normal.array : null;
+  if (corr.rot === 'ry90') {
+    for (let i = 0; i < positions.length; i += 3) {
+      let x = positions[i] + tx, y = positions[i+1] + ty, z = positions[i+2] + tz;
+      positions[i] = z; positions[i+1] = y; positions[i+2] = -x;
+    }
+    if (normals) {
+      for (let i = 0; i < normals.length; i += 3) {
+        const nx = normals[i], ny = normals[i+1], nz = normals[i+2];
+        normals[i] = nz; normals[i+1] = ny; normals[i+2] = -nx;
+      }
+    }
+  } else if (corr.rot === 'rx180') {
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i] = positions[i] + tx;
+      positions[i+1] = -(positions[i+1] + ty);
+      positions[i+2] = -(positions[i+2] + tz);
+    }
+    if (normals) {
+      for (let i = 0; i < normals.length; i += 3) {
+        normals[i+1] = -normals[i+1]; normals[i+2] = -normals[i+2];
+      }
+    }
+  } else {
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i] += tx; positions[i+1] += ty; positions[i+2] += tz;
+    }
+  }
+  geom.attributes.position.needsUpdate = true;
+  if (normals) geom.attributes.normal.needsUpdate = true;
+  geom.computeBoundingBox();
+  geom.computeBoundingSphere();
+}
+
+function loadImplant(url) {
+  if (implantCache[url]) return Promise.resolve(implantCache[url].clone());
+  const mat = new THREE.MeshPhongMaterial({ color: 0xb0b8b8, shininess: 100, specular: 0x444444 });
+  if (url.toLowerCase().endsWith('.stl')) {
+    return new Promise((resolve, reject) => {
+      stlLoader.load(url, geom => {
+        geom.computeVertexNormals();
+        applyImplantCorrection(geom, url);
+        const mesh = new THREE.Mesh(geom, mat);
+        const obj = new THREE.Group();
+        obj.add(mesh);
+        implantCache[url] = obj;
+        resolve(obj.clone());
+      }, undefined, reject);
+    });
+  }
+  return new Promise((resolve, reject) => {
+    objLoader.load(url, obj => {
+      obj.traverse(c => { if (c.isMesh) c.material = mat; });
+      implantCache[url] = obj;
+      resolve(obj.clone());
+    }, undefined, reject);
+  });
+}
+
+// ----- Update implant pose -----
+function updateImplantPose() {
+  if (!implantMesh) return;
+  const { I2P } = computeImplantToPatient();
+  implantMesh.matrix.identity();
+  implantMesh.applyMatrix4(I2P);
+}
+
+// ----- UI updates -----
+function refreshUI() {
+  document.getElementById('v-retro').textContent =
+    `${(state.planning.planning.version + state.adjust.retroversion).toFixed(1)}°`;
+  document.getElementById('v-incl').textContent =
+    `${(state.planning.planning.inclination + state.adjust.inclination).toFixed(1)}°`;
+  document.getElementById('v-depth').textContent = `${state.adjust.depth}mm`;
+  document.getElementById('v-tx').textContent = `${state.adjust.tx}mm`;
+  document.getElementById('v-ty').textContent = `${state.adjust.ty}mm`;
+  document.getElementById('v-rotz').textContent = `${state.adjust.rotz}°`;
+
+  const m = state.planning.preOp || {};
+  const fmt = (v, suf) => (v === undefined || v === null || v === '—') ? '—' : `${v}${suf}`;
+  document.getElementById('m-retro').textContent = fmt(m.retroversion, '°');
+  document.getElementById('m-incl').textContent = fmt(m.inferiorInclination, '°');
+  document.getElementById('m-sublux').textContent = fmt(m.preOpSubluxation, '%');
+  document.getElementById('case-info').textContent =
+    `Case ${state.planning.caseId} | ${state.planning.side} | ${state.planning.surgeon}`;
+
+  // Implant cards
+  document.querySelectorAll('.implant-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.implant === state.selectedImplant);
+  });
+
+  // Scenarios
+  state.scenarios.forEach((s, i) => {
+    const btn = document.querySelector(`.scenarios button[data-slot="${i}"]`);
+    if (s) {
+      btn.textContent = `Scenario ${i+1}: ${s.implant} | adj ${JSON.stringify(s.adjust)}`;
+      btn.classList.add('has-data');
+    } else {
+      btn.textContent = `Scenario ${i+1}: empty`;
+      btn.classList.remove('has-data');
+    }
+  });
+
+  refreshAccessMode();
+}
+
+// ----- Toast -----
+const toast = document.getElementById('toast');
+function showToast(msg, ms = 2200) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), ms);
+}
+
+// ----- Clipboard helper (works on HTTP too) -----
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  return Promise.resolve();
+}
+
+// ----- Implant swap -----
+async function setImplant(key) {
+  state.selectedImplant = key;
+  const side = state.planning && state.planning.side;
+  const url = implantFileFor(key, side);
+  if (!url) {
+    showToast(`No file for implant ${key}`, 3500);
+    return;
+  }
+  if (implantMesh) scene.remove(implantMesh);
+  implantMesh = await loadImplant(url);
+  implantMesh.matrixAutoUpdate = false;
+  scene.add(implantMesh);
+  implantMesh.visible = state.showImplant;
+  updateImplantPose();
+  refreshUI();
+}
+
+// ----- GPS .bin / .ini parsers (run entirely in the browser) -----
+const HEADER_SIZE = 0x60; // 96 bytes
+
+function parseMeshBin(arrayBuffer) {
+  const data = new DataView(arrayBuffer);
+  const nVerts = data.getUint32(0x5C, false); // big-endian
+
+  const geom = new THREE.BufferGeometry();
+
+  // Vertices: nVerts * 3 * float64 LE, starting at HEADER_SIZE
+  const verts = new Float32Array(nVerts * 3);
+  let off = HEADER_SIZE;
+  for (let i = 0; i < nVerts * 3; i++) {
+    verts[i] = data.getFloat64(off, true);
+    off += 8;
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+
+  // 4-byte separator
+  off += 4;
+
+  // Normals: nVerts * 3 * float64 LE
+  const norms = new Float32Array(nVerts * 3);
+  for (let i = 0; i < nVerts * 3; i++) {
+    norms[i] = data.getFloat64(off, true);
+    off += 8;
+  }
+  geom.setAttribute('normal', new THREE.BufferAttribute(norms, 3));
+
+  // 4-byte index count
+  const nIdx = data.getUint32(off, false);
+  off += 4;
+
+  // Indices: nIdx * uint32 LE
+  const indices = new Uint32Array(nIdx);
+  for (let i = 0; i < nIdx; i++) {
+    indices[i] = data.getUint32(off, true);
+    off += 4;
+  }
+  geom.setIndex(new THREE.BufferAttribute(indices, 1));
+
+  return geom;
+}
+
+function parseGpsIni(text) {
+  const result = {};
+  let section = '';
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith('[') && line.endsWith(']')) {
+      section = line.slice(1, -1);
+      continue;
+    }
+    const eq = line.indexOf('=');
+    if (eq > -1) {
+      const k = line.slice(0, eq).trim();
+      const v = line.slice(eq + 1).trim();
+      result[`${section}.${k}`] = v;
+    }
+  }
+  return result;
+}
+
+function iniMatrixToFlat(s) {
+  return s.split(/\s+/).map(Number);
+}
+
+// ----- Implant catalog -----
+//
+// Each TYPE has a clinical label (shown to the user) and either:
+//   - a single .obj (side-independent: Standard, Extended, 10° Sup Aug)
+//   - per-side .obj files (augmented: 8° Post Aug, Post Sup)
+//
+// `planningKeys` lists the strings that may appear in the GPS reverse.ini
+// for this type. The first one is the canonical key used when exporting.
+const IMPLANT_TYPES = {
+  ANAT_2_SHORT: {
+    label: 'Anatomical 2 Short',
+    ref: '3800-4028',
+    fileBySide: { LEFT: 'data/glenoid_anat_2_short.stl',
+                  RIGHT: 'data/glenoid_anat_2_short.stl' },
+    planningKeys: ['Standard/Standard']
+  },
+  ANAT_2_LONG: {
+    label: 'Anatomical 2 Long',
+    ref: '3800-4029',
+    fileBySide: { LEFT: 'data/glenoid_anat_2_long.stl',
+                  RIGHT: 'data/glenoid_anat_2_long.stl' },
+    planningKeys: ['StandardLong/Standard', 'StandardExtended/Standard']
+  },
+  ANAT_3_SHORT: {
+    label: 'Anatomical 3 Short',
+    ref: '3800-4009',
+    fileBySide: { LEFT: 'data/glenoid_anat_3_short.stl',
+                  RIGHT: 'data/glenoid_anat_3_short.stl' },
+    planningKeys: ['Standard/Standard3']
+  },
+  ANAT_3_LONG: {
+    label: 'Anatomical 3 Long',
+    ref: '3800-4010',
+    fileBySide: { LEFT: 'data/glenoid_anat_3_long.stl',
+                  RIGHT: 'data/glenoid_anat_3_long.stl' },
+    planningKeys: ['StandardLong/Standard3']
+  },
+  ROUND_3: {
+    label: 'Round 3',
+    ref: '3800-4001',
+    fileBySide: { LEFT: 'data/glenoid_round_3.stl',
+                  RIGHT: 'data/glenoid_round_3.stl' },
+    planningKeys: ['Round/Standard']
+  },
+  TECHIMPORT: {
+    label: 'TECHIMPORT',
+    fileBySide: { LEFT: 'data/techimport.stl',
+                  RIGHT: 'data/techimport.stl' },
+    planningKeys: ['TechImport/Standard']
+  }
+};
+
+// Map planningKey -> type key, built once
+const PLANNING_KEY_TO_TYPE = {};
+for (const [typeKey, def] of Object.entries(IMPLANT_TYPES)) {
+  for (const pk of def.planningKeys) PLANNING_KEY_TO_TYPE[pk] = typeKey;
+}
+
+// Resolve { typeKey, file } for a given planning string + case side.
+function resolveImplantFromPlanning(planningGlenoidPlate, side) {
+  const parts = planningGlenoidPlate.split('/');
+  // Possible "TYPE/SIZE" substring, with optional leading LEFT/RIGHT
+  let typeSize;
+  if (parts.length >= 3) typeSize = `${parts[1]}/${parts[2]}`;
+  else if (parts.length === 2) typeSize = `${parts[0]}/${parts[1]}`;
+  else typeSize = planningGlenoidPlate;
+
+  const typeKey = PLANNING_KEY_TO_TYPE[typeSize];
+  if (!typeKey) return null;
+  return { typeKey, file: implantFileFor(typeKey, side) };
+}
+
+function implantFileFor(typeKey, side) {
+  const def = IMPLANT_TYPES[typeKey];
+  if (!def) return null;
+  const sideUp = (side || 'LEFT').toUpperCase();
+  return def.fileBySide[sideUp] || def.fileBySide.LEFT;
+}
+
+function planningPlateFor(typeKey, side, currentPlate = '') {
+  const def = IMPLANT_TYPES[typeKey] || IMPLANT_TYPES.ANAT_2_SHORT;
+  const typeSize = def.planningKeys[0] || 'Standard/Standard';
+  const sideUp = (side || '').toUpperCase();
+  if (sideUp === 'LEFT' || sideUp === 'RIGHT') return `${sideUp}/${typeSize}`;
+
+  const existingSide = String(currentPlate).split('/')[0].toUpperCase();
+  if (existingSide === 'LEFT' || existingSide === 'RIGHT') {
+    return `${existingSide}/${typeSize}`;
+  }
+  return typeSize;
+}
+
+// ----- Folder import -----
+async function importCaseFolder(fileList) {
+  // Index files by relative path under the chosen folder
+  const files = {};
+  for (const f of fileList) {
+    // webkitRelativePath is like "MyCase/01-segmentation/scapula.mesh.bin"
+    const path = f.webkitRelativePath || f.name;
+    files[path] = f;
+  }
+
+  // Find the case root by looking for case.ini
+  let rootPrefix = null;
+  for (const path of Object.keys(files)) {
+    if (path.endsWith('/case.ini') || path === 'case.ini') {
+      rootPrefix = path.slice(0, path.length - 'case.ini'.length);
+      break;
+    }
+  }
+  if (rootPrefix === null) {
+    // Fall back: use the folder name from the first path
+    const first = Object.keys(files)[0];
+    const seg = first.split('/');
+    rootPrefix = seg.length > 1 ? seg[0] + '/' : '';
+  }
+
+  const findFile = (relative) => {
+    const candidates = [
+      rootPrefix + relative,
+      relative
+    ];
+    for (const c of candidates) if (files[c]) return files[c];
+    // Also accept nested under any prefix that ends with the relative path
+    for (const path of Object.keys(files)) {
+      if (path.endsWith('/' + relative)) return files[path];
+    }
+    return null;
+  };
+
+  const readText = async (file) => file ? await file.text() : null;
+  const readBuf = async (file) => file ? await file.arrayBuffer() : null;
+
+  // case.ini
+  const caseIni = await readText(findFile('case.ini'));
+  const caseData = caseIni ? parseGpsIni(caseIni) : {};
+
+  // landmarks.ini — try 01-segmentation first, then 05-autoSegmentation
+  const landmarksFile = findFile('01-segmentation/landmarks.ini')
+    || findFile('05-autoSegmentation/landmarks.ini');
+  const landmarksIni = await readText(landmarksFile);
+  const landmarks = landmarksIni ? parseGpsIni(landmarksIni) : null;
+  if (!landmarks) {
+    throw new Error('landmarks.ini not found. Cannot place implant.');
+  }
+
+  // If PatientRefToGlenoidRef is missing, compute it from landmark points
+  if (!landmarks['References.PatientRefToGlenoidRef']) {
+    const parseVec = (key) => {
+      const v = landmarks[key];
+      if (!v) return null;
+      return v.split(/\s+/).map(Number);
+    };
+    const glen = parseVec('References.Glenoid');
+    const trig = parseVec('References.Trigonum');
+    const infp = parseVec('References.InferiorPt');
+    if (!glen || !trig || !infp) {
+      throw new Error('landmarks.ini missing Glenoid/Trigonum/InferiorPt — cannot compute glenoid frame.');
+    }
+    // Z = normalize(Glenoid - Trigonum)
+    const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+    const norm = (v) => { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return [v[0]/l, v[1]/l, v[2]/l]; };
+    const dot3 = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    const scale = (v, s) => [v[0]*s, v[1]*s, v[2]*s];
+
+    const Z = norm(sub(glen, trig));
+    // Scapular plane normal
+    const v1 = sub(infp, trig);
+    const v2 = sub(glen, trig);
+    let spn = norm(cross(v1, v2));
+    // X = -scapular plane normal, orthogonalized against Z
+    let X = scale(spn, -1);
+    X = sub(X, scale(Z, dot3(X, Z)));
+    X = norm(X);
+    // Y = Z × X
+    const Y = norm(cross(Z, X));
+
+    // Row-major 4x4: col0=X, col1=Y, col2=Z, col3=translation
+    const m = [
+      X[0], Y[0], Z[0], glen[0],
+      X[1], Y[1], Z[1], glen[1],
+      X[2], Y[2], Z[2], glen[2],
+      0, 0, 0, 1
+    ];
+    landmarks['References.PatientRefToGlenoidRef'] = m.map(v => v.toString()).join(' ');
+  }
+
+  // scapula mesh — prefer 03-osteophyte, then 01-segmentation, then 05-autoSegmentation
+  const scapulaSources = {};
+  const oFile = findFile('03-osteophyte/scapula.mesh.bin');
+  const sFile = findFile('01-segmentation/scapula.mesh.bin')
+    || findFile('05-autoSegmentation/scapula.mesh.bin');
+  if (sFile) scapulaSources.original = await readBuf(sFile);
+  if (oFile) scapulaSources.osteo = await readBuf(oFile);
+  if (!scapulaSources.original && !scapulaSources.osteo) {
+    throw new Error('scapula.mesh.bin not found in any segmentation folder.');
+  }
+
+  // reverse.ini (planning) — optional
+  const reverseFile = findFile('02-planning/reverse.ini');
+  const reverseIni = await readText(reverseFile);
+  const reverse = reverseIni ? parseGpsIni(reverseIni) : null;
+
+  // Side: try landmarks first (05-autoSegmentation has it), then case.ini
+  const caseSide = landmarks['Infos.side'] || caseData['Infos.side'] || '?';
+
+  // Default implant-to-glenoid transform = identity (baseplate centered on glenoid face)
+  const defaultImplantTransform = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+
+  // Build planning JSON
+  const newPlanning = {
+    caseId: caseData['Case.caseShortId'] || 'imported',
+    side: caseSide,
+    surgeon: caseData['Infos.surgeonName'] || '?',
+    preOp: { retroversion: '—', inferiorInclination: '—', preOpSubluxation: '—' },
+    planning: {
+      glenoidPlate: reverse ? (reverse['Planning.GlenoidPlate'] || '') : 'ANAT_2_SHORT',
+      version: reverse ? parseFloat(reverse['Planning.Version'] || 0) : 0,
+      inclination: reverse ? parseFloat(reverse['Planning.Inclination'] || 0) : 0,
+      rotation: reverse ? parseFloat(reverse['Planning.Rotation'] || 0) : 0,
+      transfoFromImplantToLocalGlenoidRef: reverse
+        ? iniMatrixToFlat(reverse['Planning.transfoFromImplantToLocalGlenoidRef'])
+        : defaultImplantTransform,
+      patientRefToGlenoidRef: iniMatrixToFlat(landmarks['References.PatientRefToGlenoidRef']),
+      autoPlaced: !reverse  // flag: no reverse.ini, auto-placed from landmarks
+    }
+  };
+
+  return { planning: newPlanning, scapulaSources };
+}
+
+async function applyImportedCase(imported) {
+  // Reset scene
+  if (scapulaMesh) scene.remove(scapulaMesh);
+  if (implantMesh) scene.remove(implantMesh);
+  scapulaMesh = null;
+  implantMesh = null;
+
+  state.planning = imported.planning;
+  state.adjust = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+  state.scapulaSources = imported.scapulaSources;
+  state.useOsteo = false;
+
+  // Build the scapula mesh from buffer
+  const buf = imported.scapulaSources.original || imported.scapulaSources.osteo;
+  const geom = parseMeshBin(buf);
+  scapulaMaterial = new THREE.MeshPhongMaterial({
+    color: 0xe6dbc7, side: THREE.DoubleSide,
+    transparent: state.transparent,
+    opacity: state.transparent ? 0.5 : 1.0,
+    depthWrite: !state.transparent
+  });
+  scapulaMesh = new THREE.Mesh(geom, scapulaMaterial);
+  scene.add(scapulaMesh);
+
+  // Update glenoid frame
+  const g = state.planning.planning.patientRefToGlenoidRef;
+  glenoidRight.set(g[0], g[4], g[8]).normalize();
+  glenoidUp.set(g[1], g[5], g[9]).normalize();
+  glenoidNormal.set(g[2], g[6], g[10]).normalize();
+  glenoidCenter.set(g[3], g[7], g[11]);
+
+  const bbox = new THREE.Box3().setFromObject(scapulaMesh);
+  viewDistance = bbox.getSize(new THREE.Vector3()).length() * 0.7;
+
+  // Pick the right baseplate from planning
+  if (state.planning.planning.glenoidPlate && state.planning.planning.transfoFromImplantToLocalGlenoidRef) {
+    const found = resolveImplantFromPlanning(
+      state.planning.planning.glenoidPlate, state.planning.side
+    );
+    if (found) {
+      state.selectedImplant = found.typeKey;
+      await setImplant(state.selectedImplant);
+    } else if (state.planning.planning.autoPlaced) {
+      // Auto-placed from landmarks only — use STANDARD baseplate
+      state.selectedImplant = 'ANAT_2_SHORT';
+      await setImplant(state.selectedImplant);
+      showToast('Auto-placed STANDARD baseplate from landmarks (no planning found)', 5000);
+    } else {
+      console.warn('Implant not in catalog:', state.planning.planning.glenoidPlate);
+      showToast(`Implant "${state.planning.planning.glenoidPlate}" not in catalog — using STANDARD`, 4500);
+      state.selectedImplant = 'ANAT_2_SHORT';
+      await setImplant(state.selectedImplant);
+    }
+  } else {
+    console.warn('No planning matrix in this case — implant not placed.');
+    showToast('No planning data found in 02-planning/reverse.ini', 4000);
+  }
+
+  // Toggle osteophyte button visibility
+  document.getElementById('toggle-osteo').style.display =
+    imported.scapulaSources.osteo ? 'inline-block' : 'none';
+
+  setView('glenoid');
+  refreshUI();
+  showToast(`Case ${state.planning.caseId} imported`);
+}
+
+async function swapScapulaSource(useOsteo) {
+  const buf = useOsteo ? state.scapulaSources.osteo : state.scapulaSources.original;
+  if (!buf) return;
+  const geom = parseMeshBin(buf);
+  scapulaMesh.geometry.dispose();
+  scapulaMesh.geometry = geom;
+}
+
+// ----- Server API client -----
+// Detect the base path under which the app is hosted. Works at "/" (dev) or
+// "/gps/" (production behind reverse proxy).
+const APP_BASE = location.pathname.endsWith('/')
+  ? location.pathname
+  : location.pathname.replace(/[^/]*$/, '');
+const API_BASE = APP_BASE + 'api';
+
+// Edit token (when the user opens the URL with ?edit=...)
+function urlParams() { return new URLSearchParams(location.search); }
+function currentEditToken() { return urlParams().get('edit') || null; }
+
+// Author identification — stored in localStorage so each editor introduces
+// themselves once. Falls back to "Anonymous" if the user dismisses.
+function getAuthor() {
+  let a = localStorage.getItem('gps_author');
+  if (!a) {
+    a = (prompt('Your name (will be shown next to your edits):', '') || '').trim();
+    if (a) localStorage.setItem('gps_author', a);
+    else a = 'Anonymous';
+  }
+  return a;
+}
+
+function authHeaders(extra = {}) {
+  const h = { 'X-Author': getAuthor(), ...extra };
+  return h;
+}
+
+// Append edit token (if any) to a URL's query string for mutating endpoints
+function withEdit(url) {
+  const t = currentEditToken();
+  return t ? url + (url.includes('?') ? '&' : '?') + 'edit=' + encodeURIComponent(t) : url;
+}
+
+async function saveToServer() {
+  if (!state.planning || !state.scapulaSources) {
+    showToast('Import a case first', 3000);
+    return;
+  }
+  if (state.serverCaseId) {
+    // Already on the server — saving means flushing scenarios.
+    return await syncScenariosToServer();
+  }
+
+  const fd = new FormData();
+  const meta = {
+    caseShortId: state.planning.caseId,
+    side: state.planning.side,
+    surgeon: state.planning.surgeon,
+    creatorName: getAuthor(),
+    preOp: state.planning.preOp || {},
+    planning: state.planning.planning
+  };
+  fd.append('metadata', JSON.stringify(meta));
+  fd.append('scapula', new Blob([state.scapulaSources.original]), 'scapula.bin');
+  if (state.scapulaSources.osteo) {
+    fd.append('scapula_osteo',
+      new Blob([state.scapulaSources.osteo]), 'scapula_osteo.bin');
+  }
+
+  showToast('Uploading to server...');
+  const resp = await fetch(`${API_BASE}/cases`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: fd
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+  const { id, edit_token } = await resp.json();
+  state.serverCaseId = id;
+
+  // Build edit URL and copy to clipboard. The user is now in edit mode.
+  const editUrl =
+    `${location.origin}${APP_BASE}?case=${id}&edit=${edit_token}`;
+  history.replaceState({}, '', `?case=${id}&edit=${edit_token}`);
+  try { await copyText(editUrl); } catch (e) {}
+
+  // Push any pre-existing scenarios that were saved in memory before upload
+  await syncScenariosToServer();
+
+  showToast('Saved. Edit URL copied to clipboard.', 6000);
+}
+
+// Push every non-null in-memory scenario to the server (creates new rows).
+async function syncScenariosToServer() {
+  if (!state.serverCaseId || !currentEditToken()) return;
+  let pushed = 0;
+  for (const s of state.scenarios) {
+    if (!s || s._serverId) continue;
+    const resp = await fetch(
+      withEdit(`${API_BASE}/cases/${state.serverCaseId}/scenarios`),
+      {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          name: s.name || null,
+          implantType: s.implant,
+          adjust: s.adjust,
+          slot: s.slot ?? null
+        })
+      }
+    );
+    if (resp.ok) {
+      const { id } = await resp.json();
+      s._serverId = id;
+      pushed++;
+    }
+  }
+  if (pushed) showToast(`Synced ${pushed} scenario(s)`);
+}
+
+async function loadFromServer(caseId) {
+  showToast('Loading case from server...');
+  const resp = await fetch(`${API_BASE}/cases/${caseId}`);
+  if (!resp.ok) {
+    showToast(`Case ${caseId} not found`, 4000);
+    return;
+  }
+  const data = await resp.json();
+
+  // Fetch meshes in parallel
+  const meshUrls = [`${API_BASE}/cases/${caseId}/mesh/scapula`];
+  if (data.hasOsteo) meshUrls.push(`${API_BASE}/cases/${caseId}/mesh/scapula_osteo`);
+  const buffers = await Promise.all(meshUrls.map(u =>
+    fetch(u).then(r => r.ok ? r.arrayBuffer() : null)
+  ));
+  const sources = { original: buffers[0] };
+  if (buffers[1]) sources.osteo = buffers[1];
+
+  const imported = {
+    planning: {
+      caseId: data.caseShortId || data.id,
+      side: data.side,
+      surgeon: data.surgeon,
+      preOp: data.preOp || {},
+      planning: data.planning
+    },
+    scapulaSources: sources
+  };
+  await applyImportedCase(imported);
+  state.serverCaseId = caseId;
+
+  // Map remote scenarios into our 3 slots — keep server ids attached
+  state.scenarios = [null, null, null];
+  (data.scenarios || []).forEach((s, i) => {
+    const slot = (s.slot != null && s.slot < 3) ? s.slot : i;
+    if (slot >= 0 && slot < 3) {
+      state.scenarios[slot] = {
+        _serverId: s.id,
+        name: s.name,
+        author: s.author,
+        implant: s.implantType,
+        adjust: s.adjust,
+        slot
+      };
+    }
+  });
+
+  state.comments = data.comments || [];
+  refreshUI();
+  refreshComments();
+
+  const editing = !!currentEditToken();
+  showToast(editing
+    ? `Loaded ${caseId} — edit mode (${getAuthor()})`
+    : `Loaded ${caseId} — read only`, 4000);
+}
+
+// ----- Init -----
+async function init() {
+  const planning = await fetch('data/planning.json').then(r => r.json());
+  state.planning = planning;
+
+  scapulaMesh = await loadScapula('data/scapula.obj');
+  scene.add(scapulaMesh);
+
+  // Compute glenoid local frame in patient coords from PatientRefToGlenoidRef
+  // (which actually goes Glenoid -> Patient, so its columns are the local axes)
+  const g = planning.planning.patientRefToGlenoidRef;
+  glenoidRight.set(g[0], g[4], g[8]).normalize();   // local +X (ant-post)
+  glenoidUp.set(g[1], g[5], g[9]).normalize();      // local +Y (sup-inf)
+  glenoidNormal.set(g[2], g[6], g[10]).normalize(); // local +Z (lateral, glenoid face normal)
+  glenoidCenter.set(g[3], g[7], g[11]);
+
+  // Determine view distance based on bounding box
+  const bbox = new THREE.Box3().setFromObject(scapulaMesh);
+  viewDistance = bbox.getSize(new THREE.Vector3()).length() * 0.7;
+
+  // Resolve default implant from planning if available
+  const gp = state.planning.planning.glenoidPlate;
+  if (gp) {
+    const found = resolveImplantFromPlanning(gp, state.planning.side);
+    if (found) state.selectedImplant = found.typeKey;
+  }
+  await setImplant(state.selectedImplant);
+
+  // Default view: glenoid face-on
+  setView('glenoid');
+
+  refreshUI();
+  resize();
+  animate();
+
+  // If URL has ?case=<id>, override the default with the server case
+  const params = new URLSearchParams(location.search);
+  const caseQuery = params.get('case');
+  if (caseQuery) {
+    try { await loadFromServer(caseQuery); }
+    catch (e) { console.error(e); showToast('Server load failed: ' + e.message, 4000); }
+  }
+}
+
+// Set predefined camera views
+function setView(name) {
+  const dist = viewDistance;
+  let camPos, up;
+
+  // glenoidUp points toward the superior pole of the glenoid in patient
+  // coords (verified against GlSup landmark). Use it directly so superior is
+  // up on screen.
+  if (name === 'glenoid') {
+    // Face-on view of the glenoid (looking from lateral toward medial)
+    camPos = glenoidCenter.clone().add(glenoidNormal.clone().multiplyScalar(dist));
+    up = glenoidUp.clone();
+  } else if (name === 'anterior') {
+    // Anterior view — camera in front of the patient looking posteriorly
+    camPos = glenoidCenter.clone().add(glenoidRight.clone().multiplyScalar(-dist));
+    up = glenoidUp.clone();
+  } else if (name === 'lateral') {
+    // Lateral profile — camera positioned along glenoidRight (ant-post axis),
+    // looking across the scapula
+    camPos = glenoidCenter.clone().add(glenoidRight.clone().multiplyScalar(dist));
+    up = glenoidUp.clone();
+  } else if (name === 'inferior') {
+    // Inferior view — camera below, looking up
+    camPos = glenoidCenter.clone().add(glenoidUp.clone().multiplyScalar(-dist));
+    up = glenoidNormal.clone();
+  }
+
+  if (camPos) {
+    controls.target.copy(glenoidCenter);
+    camera.position.copy(camPos);
+    camera.up.copy(up);
+    camera.lookAt(glenoidCenter);
+    controls.update();
+  }
+}
+
+// ----- Render loop -----
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+// Also observe viewer element for CSS-driven size changes (mobile layout shift)
+if (window.ResizeObserver) {
+  new ResizeObserver(resize).observe(canvas.parentElement);
+}
+
+function animate() {
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+// ----- Event handlers -----
+document.querySelectorAll('.ctrl-btn[data-axis]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const axis = btn.dataset.axis;
+    const delta = parseFloat(btn.dataset.delta);
+    state.adjust[axis] += delta;
+    updateImplantPose();
+    refreshUI();
+  });
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.adjust = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+  updateImplantPose();
+  refreshUI();
+  showToast('Reset to original plan');
+});
+
+document.getElementById('toggle-implant').addEventListener('click', (e) => {
+  state.showImplant = !state.showImplant;
+  if (implantMesh) implantMesh.visible = state.showImplant;
+  e.target.classList.toggle('active', state.showImplant);
+  e.target.textContent = state.showImplant ? 'Show Implant' : 'Hide Implant';
+});
+
+document.getElementById('toggle-transparent').addEventListener('click', (e) => {
+  state.transparent = !state.transparent;
+  setScapulaTransparent(state.transparent);
+  e.target.classList.toggle('active', state.transparent);
+  e.target.textContent = state.transparent ? 'Solid Bone' : 'Transparent Bone';
+});
+
+document.getElementById('view-anterior').addEventListener('click', () => setView('anterior'));
+document.getElementById('view-glenoid').addEventListener('click', () => setView('glenoid'));
+document.getElementById('view-lateral').addEventListener('click', () => setView('lateral'));
+document.getElementById('view-inferior').addEventListener('click', () => setView('inferior'));
+
+document.querySelectorAll('.implant-card').forEach(card => {
+  card.addEventListener('click', () => setImplant(card.dataset.implant));
+});
+
+document.querySelectorAll('.scenarios button').forEach(btn => {
+  let pressTimer = null;
+  btn.addEventListener('click', () => {
+    const slot = parseInt(btn.dataset.slot);
+    if (state.scenarios[slot]) {
+      // Load
+      state.adjust = { ...state.scenarios[slot].adjust };
+      setImplant(state.scenarios[slot].implant);
+      showToast(`Scenario ${slot+1} loaded`);
+    } else {
+      showToast(`Scenario ${slot+1} is empty. Use "Save Current Scenario" to fill it.`);
+    }
+  });
+});
+
+document.getElementById('btn-save-current').addEventListener('click', async () => {
+  // Find first empty slot, or rotate
+  let slot = state.scenarios.findIndex(s => !s);
+  if (slot === -1) {
+    slot = 0;
+    state.scenarios.shift();
+    state.scenarios.push(null);
+  }
+  const name = (prompt(`Name for scenario ${slot+1} (optional):`, '') || '').trim();
+  const local = {
+    implant: state.selectedImplant,
+    adjust: { ...state.adjust },
+    name: name || null,
+    author: getAuthor(),
+    slot
+  };
+  state.scenarios[slot] = local;
+  refreshUI();
+
+  // Persist to server if we're in edit mode for a server-backed case
+  if (state.serverCaseId && currentEditToken()) {
+    try {
+      const resp = await fetch(
+        withEdit(`${API_BASE}/cases/${state.serverCaseId}/scenarios`),
+        {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            name: local.name, implantType: local.implant,
+            adjust: local.adjust, slot
+          })
+        });
+      if (resp.ok) {
+        const { id } = await resp.json();
+        local._serverId = id;
+        showToast(`Saved to slot ${slot+1} (synced)`);
+      } else {
+        showToast(`Saved locally — server error (${resp.status})`, 4000);
+      }
+    } catch (e) {
+      showToast(`Saved locally — server unreachable`, 4000);
+    }
+  } else {
+    showToast(`Saved to slot ${slot+1} (local)`);
+  }
+});
+
+document.getElementById('btn-export-ini').addEventListener('click', () => {
+  const { I2G_modified } = computeImplantToPatient();
+  const flat = matrix4ToFlat(I2G_modified);
+  const p = state.planning;
+
+  const ini = `[Case]
+caseShortId=${p.caseId}
+creatorUsername=web-planner
+
+[Infos]
+PlanningAppVersion=web-planner-1.0
+
+[DataFile]
+version=1
+
+[Planning]
+GlenoidPlate=${planningPlateFor(state.selectedImplant, p.side, p.planning.glenoidPlate)}
+Glenosphere=Standard/38
+Version=${(p.planning.version + state.adjust.retroversion).toFixed(6)}
+Inclination=${(p.planning.inclination + state.adjust.inclination).toFixed(6)}
+Rotation=${state.adjust.rotz.toFixed(6)}
+transfoFromImplantToLocalGlenoidRef=${flat.map(f => f.toFixed(15)).join(' ')}
+`;
+  const blob = new Blob([ini], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${p.caseId}_modified.ini`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('reverse.ini exported');
+});
+
+document.getElementById('btn-share').addEventListener('click', () => {
+  if (!state.serverCaseId) {
+    showToast('Save to server first', 3000);
+    return;
+  }
+  const editToken = currentEditToken();
+  const viewUrl = `${location.origin}${APP_BASE}?case=${state.serverCaseId}`;
+  const editUrl = editToken ? `${viewUrl}&edit=${editToken}` : null;
+
+  const overlay = document.getElementById('share-overlay');
+  const resultEl = document.getElementById('share-result');
+  const editBtn = document.getElementById('share-edit');
+  resultEl.textContent = '';
+
+  // Hide EDIT button if no edit token (view-only mode)
+  editBtn.style.display = editUrl ? '' : 'none';
+
+  overlay.classList.add('open');
+
+  function close() {
+    overlay.classList.remove('open');
+    editBtn.removeEventListener('click', onEdit);
+    document.getElementById('share-view').removeEventListener('click', onView);
+    overlay.removeEventListener('click', onOverlay);
+  }
+  function onEdit() {
+    copyText(editUrl);
+    resultEl.textContent = '✓ Edit link copied to clipboard';
+    setTimeout(close, 1500);
+  }
+  function onView() {
+    copyText(viewUrl);
+    resultEl.textContent = '✓ View-only link copied to clipboard';
+    setTimeout(close, 1500);
+  }
+  function onOverlay(e) {
+    if (e.target === overlay) close();
+  }
+
+  editBtn.addEventListener('click', onEdit);
+  document.getElementById('share-view').addEventListener('click', onView);
+  overlay.addEventListener('click', onOverlay);
+});
+
+// Load shared planning from URL hash
+window.addEventListener('hashchange', loadFromHash);
+function loadFromHash() {
+  const m = location.hash.match(/p=([^&]+)/);
+  if (!m) return;
+  try {
+    const data = JSON.parse(decodeURIComponent(atob(m[1])));
+    state.adjust = data.adjust || state.adjust;
+    state.scenarios = data.scenarios || state.scenarios;
+    if (data.implant) setImplant(data.implant);
+    else { updateImplantPose(); refreshUI(); }
+    showToast('Shared plan loaded');
+  } catch(e) { console.error(e); }
+}
+
+document.getElementById('btn-import-folder').addEventListener('click', () => {
+  document.getElementById('folder-import').click();
+});
+
+document.getElementById('folder-import').addEventListener('change', async (e) => {
+  const files = e.target.files;
+  if (!files || !files.length) return;
+  showToast('Importing case folder...');
+  try {
+    const imported = await importCaseFolder(files);
+    await applyImportedCase(imported);
+  } catch (err) {
+    console.error(err);
+    showToast('Import error: ' + err.message, 4000);
+  }
+});
+
+document.getElementById('btn-save-server').addEventListener('click', async () => {
+  try { await saveToServer(); }
+  catch (e) { console.error(e); showToast('Server error: ' + e.message, 5000); }
+});
+
+document.getElementById('btn-add-comment').addEventListener('click', async () => {
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!state.serverCaseId) {
+    showToast('Save the case to the server first', 3000);
+    return;
+  }
+  try {
+    const resp = await fetch(
+      `${API_BASE}/cases/${state.serverCaseId}/comments`,
+      {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ text })
+      }
+    );
+    if (!resp.ok) throw new Error(await resp.text());
+    const c = await resp.json();
+    state.comments.push(c);
+    refreshComments();
+    input.value = '';
+  } catch (e) {
+    showToast('Comment error: ' + e.message, 4000);
+  }
+});
+
+document.getElementById('toggle-osteo').addEventListener('click', (e) => {
+  if (!state.scapulaSources || !state.scapulaSources.osteo) return;
+  state.useOsteo = !state.useOsteo;
+  swapScapulaSource(state.useOsteo);
+  e.target.classList.toggle('active', state.useOsteo);
+  e.target.textContent = state.useOsteo ? 'Show Original Scapula' : 'Remove Osteophytes';
+});
+document.getElementById('file-import').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      if (f.name.endsWith('.json')) {
+        const d = JSON.parse(ev.target.result);
+        if (d.adjust) state.adjust = d.adjust;
+        if (d.implant) setImplant(d.implant);
+        else { updateImplantPose(); refreshUI(); }
+        showToast('Plan imported (.json)');
+      } else if (f.name.endsWith('.ini')) {
+        // Parse simple INI for transfoFromImplantToLocalGlenoidRef
+        const text = ev.target.result;
+        const m = text.match(/transfoFromImplantToLocalGlenoidRef=([^\n\r]+)/);
+        if (m) {
+          const vals = m[1].trim().split(/\s+/).map(parseFloat);
+          state.planning.planning.transfoFromImplantToLocalGlenoidRef = vals;
+          state.adjust = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+          updateImplantPose();
+          refreshUI();
+          showToast('Matrix imported from .ini');
+        }
+      }
+    } catch(err) { showToast('Import error: ' + err.message); }
+  };
+  reader.readAsText(f);
+});
+
+// Boot
+init().catch(err => {
+  console.error(err);
+  showToast('Load error: ' + err.message);
+});
+// Try loading from hash after init
+setTimeout(loadFromHash, 500);
+</script>
+</body>
+</html>

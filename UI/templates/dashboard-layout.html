@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SchulterPlan — Dashboard Template</title>
+  <link rel="stylesheet" href="../css/schulterplan.css" />
+  <style>
+    /* Local-only dashboard tweaks — keep these to a minimum.
+       Most styles come from schulterplan.css. */
+    body { background: var(--bg-base-alt); }
+    .dashboard-viewport { position: relative; }
+    .dashboard-viewport canvas { width: 100%; height: 100%; display: block; }
+    .viewport-label {
+      position: absolute; bottom: 6px; left: 8px;
+      font-size: 9px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); opacity: 0.7;
+      pointer-events: none;
+    }
+    .ai-tool { padding: 12px; border-bottom: 1px solid var(--border); }
+    .ai-tool-title {
+      font-size: 11px; font-weight: 600;
+      color: var(--text-primary); margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ai-tool-desc { font-size: 10px; color: var(--text-muted); line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+
+  <!-- ── TOPBAR ── -->
+  <div class="topbar" style="height:52px">
+    <div class="topbar-logo">
+      <img src="../assets/logo_implantcast.png" alt="" style="height:28px" />
+      <h1 style="font-size:15px">SchulterPlan</h1>
+    </div>
+    <span class="badge badge-accent"><span class="live-dot"></span> LIVE</span>
+    <div class="row" style="gap:20px;font-size:12px;color:var(--text-secondary)">
+      <span><span class="text-muted">Patient:</span> <strong>M. Silva</strong></span>
+      <span><span class="text-muted">Side:</span> <strong>Left</strong></span>
+      <span><span class="text-muted">Implant:</span> <strong>Agilon Anat. 2 Short</strong></span>
+    </div>
+    <div class="spacer"></div>
+    <a href="planner-3col-layout.html" class="btn btn-ghost btn-sm">← Back to Planner</a>
+  </div>
+
+  <!-- ── MAIN GRID (6 viewports + side panel) ── -->
+  <div class="main-content">
+
+    <!-- Side panel (humerus + implant info) -->
+    <aside class="card" style="grid-row:1/-1;padding:0;display:flex;flex-direction:column">
+      <div class="card-header">Implant</div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+        <div class="row-between"><span class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Type</span><span style="font-weight:600">Agilon</span></div>
+        <div class="row-between"><span class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Size</span><span style="font-size:20px;font-weight:700">2 Short</span></div>
+        <div class="row-between"><span class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Retro.</span><span class="text-brand" style="font-weight:600">+8.0°</span></div>
+        <div class="row-between"><span class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Incl.</span><span class="text-brand" style="font-weight:600">−5.0°</span></div>
+        <div class="row-between"><span class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Depth</span><span class="text-brand" style="font-weight:600">−1 mm</span></div>
+      </div>
+    </aside>
+
+    <!-- Viewport tiles (replace with canvas in production) -->
+    <div class="card" style="padding:0">
+      <div class="card-header">Anterior</div>
+      <div class="dashboard-viewport" style="flex:1;display:flex;align-items:center;justify-content:center">
+        <span class="text-muted" style="font-size:11px">Canvas slot</span>
+        <span class="viewport-label">anterior</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="card-header">Glenoid</div>
+      <div class="dashboard-viewport" style="flex:1;display:flex;align-items:center;justify-content:center">
+        <span class="text-muted" style="font-size:11px">Canvas slot</span>
+        <span class="viewport-label">glenoid</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="card-header">Lateral</div>
+      <div class="dashboard-viewport" style="flex:1;display:flex;align-items:center;justify-content:center">
+        <span class="text-muted" style="font-size:11px">Canvas slot</span>
+        <span class="viewport-label">lateral</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="card-header">Superior</div>
+      <div class="dashboard-viewport" style="flex:1;display:flex;align-items:center;justify-content:center">
+        <span class="text-muted" style="font-size:11px">Canvas slot</span>
+        <span class="viewport-label">superior</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="card-header">Posterior</div>
+      <div class="dashboard-viewport" style="flex:1;display:flex;align-items:center;justify-content:center">
+        <span class="text-muted" style="font-size:11px">Canvas slot</span>
+        <span class="viewport-label">posterior</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="card-header">Inferior</div>
+      <div class="dashboard-viewport" style="flex:1;display:flex;align-items:center;justify-content:center">
+        <span class="text-muted" style="font-size:11px">Canvas slot</span>
+        <span class="viewport-label">inferior</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AI PANEL ── -->
+  <aside class="ai-panel">
+    <div class="card-header" style="background:var(--primary-soft);color:var(--primary)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:middle">
+        <circle cx="12" cy="12" r="4"/>
+      </svg>
+      AI Co-Pilot
+    </div>
+
+    <div class="ai-tool">
+      <div class="ai-tool-title"><span class="live-dot"></span> Voice Notes</div>
+      <div class="ai-tool-desc">Speak to log intra-op observations. Transcribed in real time.</div>
+    </div>
+
+    <div class="ai-tool">
+      <div class="ai-tool-title">Bone Contact</div>
+      <div class="ai-tool-desc">Live heat map below the implant. Currently <span class="text-brand">84%</span>.</div>
+    </div>
+
+    <div class="ai-tool">
+      <div class="ai-tool-title">Auto Measure</div>
+      <div class="ai-tool-desc">Inferior <span class="text-primary">16.1 mm</span> · Anterior <span class="text-primary">5.4 mm</span>.</div>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

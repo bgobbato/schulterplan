@@ -1,0 +1,432 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-05-26T20:27:14.390277Z",
+  "case": {
+    "case_id": "teste-506460eb",
+    "patient_id": "Teste",
+    "side": "R",
+    "side_label": "right",
+    "exam_date": "2026-01-09",
+    "surgery_date": "2026-06-16",
+    "patient_age": null,
+    "doctor_id": "local-doctor",
+    "case_status": "Completed",
+    "selected_series_description": "VOL. STND",
+    "selected_series_class": "soft_tissue"
+  },
+  "coordinate_systems": {
+    "editable_landmarks": {
+      "type": "nifti_voxel_zyx",
+      "units": "voxel",
+      "source_volume": "processing/selected_series_0000.nii.gz"
+    },
+    "physical": {
+      "type": "nifti_physical_xyz_mm",
+      "units": "mm",
+      "origin_xyz": [
+        -47.900001525878906,
+        -171.5,
+        -79.55000305175781
+      ],
+      "spacing_xyz_mm": [
+        0.6699219942092896,
+        0.6699219942092896,
+        0.625
+      ],
+      "note": "Physical coordinates come from the selected axial NIfTI generated from DICOM. Keep this volume with the planning package for exact CT/model alignment."
+    },
+    "mesh": {
+      "type": "obj_xyz_mm",
+      "units": "mm",
+      "source": "marching_cubes_from_selected_nifti"
+    }
+  },
+  "models": {
+    "scapula_obj": "planning/models/scapula_planning.obj",
+    "humerus_obj": "planning/models/humerus_planning.obj"
+  },
+  "ct": {
+    "axial_volume_nifti_gz": "processing/selected_series_0000.nii.gz",
+    "selected_series_summary_json": "processing/selected_series_summary.json",
+    "series_catalog_json": "series_catalog.json",
+    "note": "Use selected_series_0000.nii.gz for exact axial CT/MPR overlay. It is compact and preserves spacing/origin used by the meshes."
+  },
+  "landmarks": {
+    "scapula": {
+      "glenoid_center": {
+        "zyx": [
+          174,
+          249,
+          229
+        ],
+        "xyz_mm": [
+          105.5121,
+          -4.6894,
+          29.2
+        ],
+        "source": "user",
+        "status": "draft"
+      },
+      "trigonum": {
+        "zyx": [
+          230,
+          343,
+          126
+        ],
+        "xyz_mm": [
+          36.5102,
+          58.2832,
+          64.2
+        ],
+        "source": "user",
+        "status": "draft"
+      },
+      "glenoid_anterior": {
+        "zyx": [
+          158,
+          232,
+          224
+        ],
+        "xyz_mm": [
+          102.1625,
+          -16.0781,
+          19.2
+        ],
+        "source": "user",
+        "status": "draft"
+      },
+      "glenoid_posterior": {
+        "zyx": [
+          192,
+          262,
+          240
+        ],
+        "xyz_mm": [
+          112.8813,
+          4.0196,
+          40.45
+        ],
+        "source": "user",
+        "status": "draft"
+      },
+      "glenoid_superior": {
+        "zyx": [
+          198,
+          224,
+          231
+        ],
+        "xyz_mm": [
+          106.852,
+          -21.4375,
+          44.2
+        ],
+        "source": "user",
+        "status": "draft"
+      },
+      "glenoid_inferior": {
+        "zyx": [
+          150,
+          262,
+          238
+        ],
+        "xyz_mm": [
+          111.5414,
+          4.0196,
+          14.2
+        ],
+        "source": "user",
+        "status": "draft"
+      }
+    },
+    "humerus": {
+      "humeral_head_center": {
+        "zyx": [
+          177,
+          240,
+          266
+        ],
+        "xyz_mm": [
+          130.2993,
+          -10.7187,
+          31.075
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "humeral_head_radius_point": {
+        "zyx": [
+          146,
+          223,
+          285
+        ],
+        "xyz_mm": [
+          143.0278,
+          -22.1074,
+          11.7
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "humeral_canal_proximal": {
+        "zyx": [
+          108,
+          259,
+          288
+        ],
+        "xyz_mm": [
+          145.0375,
+          2.0098,
+          -12.05
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "humeral_canal_distal": {
+        "zyx": [
+          31,
+          270,
+          303
+        ],
+        "xyz_mm": [
+          155.0864,
+          9.3789,
+          -60.175
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "bicipital_groove_proximal": {
+        "zyx": [
+          184,
+          198,
+          262
+        ],
+        "xyz_mm": [
+          127.6196,
+          -38.8554,
+          35.45
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "bicipital_groove_distal": {
+        "zyx": [
+          148,
+          214,
+          266
+        ],
+        "xyz_mm": [
+          130.2993,
+          -28.1367,
+          12.95
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "anatomic_neck_center": {
+        "zyx": [
+          185,
+          231,
+          267
+        ],
+        "xyz_mm": [
+          130.9692,
+          -16.748,
+          36.075
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "anatomic_neck_axis_a": {
+        "zyx": [
+          192,
+          261,
+          249
+        ],
+        "xyz_mm": [
+          118.9106,
+          3.3496,
+          40.45
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "anatomic_neck_axis_b": {
+        "zyx": [
+          178,
+          201,
+          286
+        ],
+        "xyz_mm": [
+          143.6977,
+          -36.8457,
+          31.7
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      },
+      "anatomic_neck_normal_end": {
+        "zyx": [
+          180,
+          240,
+          264
+        ],
+        "xyz_mm": [
+          128.9594,
+          -10.7187,
+          32.95
+        ],
+        "source": "shoulder-landmarks",
+        "status": "draft"
+      }
+    }
+  },
+  "axes": {
+    "scapula": {
+      "friedman": {
+        "from": "trigonum",
+        "to": "glenoid_center",
+        "origin_landmark": "glenoid_center",
+        "target_landmark": "trigonum",
+        "vector_xyz": [
+          0.691688,
+          -0.631249,
+          -0.350846
+        ],
+        "status": "draft"
+      },
+      "glenoid_ap": {
+        "from": "glenoid_posterior",
+        "to": "glenoid_anterior",
+        "vector_xyz": [
+          -0.344093,
+          -0.645174,
+          -0.682166
+        ],
+        "display_color": "blue"
+      },
+      "glenoid_si": {
+        "from": "glenoid_inferior",
+        "to": "glenoid_superior",
+        "vector_xyz": [
+          -0.118349,
+          -0.642467,
+          0.757119
+        ],
+        "display_color": "green"
+      }
+    },
+    "humerus": {
+      "canal_axis": {
+        "from": "humeral_canal_distal",
+        "to": "humeral_canal_proximal",
+        "display_color": "blue",
+        "status": "draft",
+        "vector_xyz": [
+          -0.20214,
+          -0.148236,
+          0.968073
+        ]
+      },
+      "bicipital_groove_axis": {
+        "from": "bicipital_groove_distal",
+        "to": "bicipital_groove_proximal",
+        "display_color": "purple",
+        "status": "draft"
+      }
+    }
+  },
+  "planes": {
+    "glenoid_plane": {
+      "center_landmark": "glenoid_center",
+      "ap_axis": "glenoid_ap",
+      "si_axis": "glenoid_si",
+      "normal_xyz": [
+        -0.928486,
+        0.341895,
+        0.144985
+      ],
+      "status": "draft"
+    },
+    "humeral_neck_plane_auto": {
+      "center_landmark": "anatomic_neck_center",
+      "normal_landmark": "anatomic_neck_normal_end",
+      "source": "shoulder-landmarks",
+      "display_color": "yellow",
+      "status": "reference"
+    },
+    "humeral_neck_plane_135": {
+      "center_landmark": "anatomic_neck_center",
+      "angle_to_canal_deg": 135,
+      "orientation_adjustment_deg": 180,
+      "source": "automatic_geometric_rule",
+      "display_color": "green",
+      "status": "draft"
+    }
+  },
+  "measurements": {
+    "scapula": {
+      "retroversion_deg": {
+        "value": 24.43,
+        "units": "deg",
+        "method": "friedman_glenoid_ap_v1",
+        "status": "draft",
+        "inputs": [
+          "friedman",
+          "glenoid_anterior",
+          "glenoid_posterior"
+        ]
+      },
+      "inclination_deg": {
+        "value": -5.23,
+        "units": "deg",
+        "method": "friedman_glenoid_si_v1",
+        "status": "draft",
+        "inputs": [
+          "friedman",
+          "glenoid_superior",
+          "glenoid_inferior"
+        ]
+      }
+    },
+    "humerus": {
+      "humeral_head_radius_mm": {
+        "value": 25.83,
+        "units": "mm",
+        "method": "proximal_humerus_sphere_fit_v1",
+        "status": "draft"
+      },
+      "humeral_head_diameter_mm": {
+        "value": 51.66,
+        "units": "mm",
+        "method": "radius_times_two_v1",
+        "status": "draft"
+      },
+      "neck_shaft_angle_deg": {
+        "value": 136.37,
+        "units": "deg",
+        "method": "proximal_humerus_canal_articular_v1",
+        "status": "draft"
+      },
+      "posterior_subluxation_index_percent": {
+        "value": 73.72,
+        "units": "percent",
+        "method": "friedman_psi_axial_v1",
+        "status": "draft",
+        "inputs": [
+          "glenoid_center",
+          "trigonum",
+          "glenoid_posterior",
+          "humeral_head_center",
+          "humeral_head_radius_mm"
+        ]
+      },
+      "posterior_offset_mm": {
+        "value": 12.26,
+        "units": "mm",
+        "method": "head_center_to_friedman_axis_v1",
+        "status": "draft"
+      }
+    }
+  }
+}

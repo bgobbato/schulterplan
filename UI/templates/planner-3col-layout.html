@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>SchulterPlan — Planner Template</title>
+  <link rel="stylesheet" href="../css/schulterplan.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── TOPBAR ── -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <img src="../assets/logo_implantcast.png" alt="" />
+      <h1>SchulterPlan</h1>
+    </div>
+    <span class="case-info">No case loaded</span>
+    <div class="spacer"></div>
+
+    <div class="segmented" role="tablist" aria-label="View">
+      <button class="seg-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2L8 6v6l-2 2v6l4-2 2 2 2-2 4 2v-6l-2-2V6l-4-4z"/></svg>
+        <span>anterior</span>
+      </button>
+      <button class="seg-btn active">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="12" cy="12" rx="6" ry="9"/></svg>
+        <span>glenoid</span>
+      </button>
+      <button class="seg-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 2v6l-3 3v6l3 5h-4l-2-5v-6l2-3V2z"/></svg>
+        <span>lateral</span>
+      </button>
+      <button class="seg-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22l-4-4h3V10H8l4-4 4 4h-3v8h3z"/></svg>
+        <span>inferior</span>
+      </button>
+    </div>
+
+    <button class="btn btn-accent active" aria-pressed="true">Implant On</button>
+    <button class="btn btn-ghost">Transparent</button>
+    <button class="btn btn-primary">Import Case</button>
+  </div>
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <aside class="sidebar left">
+    <div class="section-label">Pre-Op Measurements</div>
+    <div class="card">
+      <div class="measure-row"><span class="label">Retroversion</span><span class="value">—</span></div>
+      <div class="measure-row"><span class="label">Inferior Incl.</span><span class="value">—</span></div>
+      <div class="measure-row"><span class="label">Pre-op Sublux.</span><span class="value">—</span></div>
+    </div>
+
+    <div class="section-label">Implant Selection</div>
+    <div class="implant-group-label">Group A</div>
+    <div class="implant-grid">
+      <div class="implant-card selected"><div class="icon">🦴</div><span>Item</span><span>1</span></div>
+      <div class="implant-card"><div class="icon">🦴</div><span>Item</span><span>2</span></div>
+      <div class="implant-card"><div class="icon">🦴</div><span>Item</span><span>3</span></div>
+      <div class="implant-card"><div class="icon">🦴</div><span>Item</span><span>4</span></div>
+    </div>
+
+    <div class="section-label">Saved Scenarios</div>
+    <div class="scenario-list">
+      <button class="scenario-btn">Scenario 1: empty</button>
+      <button class="scenario-btn">Scenario 2: empty</button>
+      <button class="scenario-btn">Scenario 3: empty</button>
+    </div>
+
+    <div class="actions-stack">
+      <button class="btn btn-primary w-full">Save Current Scenario</button>
+      <button class="btn btn-ghost w-full">Save to Server</button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CANVAS ── -->
+  <main class="viewer">
+    <canvas></canvas>
+    <div class="viewer-placeholder">
+      <div class="bone-icon">🦴</div>
+      Main Canvas<br/>
+      <span class="sub">Drop content here</span>
+    </div>
+  </main>
+
+  <!-- ── RIGHT SIDEBAR ── -->
+  <aside class="sidebar right">
+    <div class="section-label">Controls</div>
+
+    <div class="control-row">
+      <button class="ctrl-btn" aria-label="Decrement">←</button>
+      <div class="ctrl-label"><div class="name">Retroversion</div><div class="value">0.0°</div></div>
+      <button class="ctrl-btn" aria-label="Increment">→</button>
+    </div>
+    <div class="control-row">
+      <button class="ctrl-btn" aria-label="Decrement">↓</button>
+      <div class="ctrl-label"><div class="name">Inferior Incl.</div><div class="value">0.0°</div></div>
+      <button class="ctrl-btn" aria-label="Increment">↑</button>
+    </div>
+    <div class="control-row">
+      <button class="ctrl-btn" aria-label="Decrement">−</button>
+      <div class="ctrl-label"><div class="name">Depth</div><div class="value">0mm</div></div>
+      <button class="ctrl-btn" aria-label="Increment">+</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Translation</div>
+    <div class="arrow-pad" role="group" aria-label="Translation">
+      <div class="empty"></div>
+      <button class="ctrl-btn" aria-label="Up">↑</button>
+      <div class="empty"></div>
+      <button class="ctrl-btn" aria-label="Left">←</button>
+      <div class="empty"></div>
+      <button class="ctrl-btn" aria-label="Right">→</button>
+      <button class="ctrl-btn" aria-label="Rotate CCW">↺</button>
+      <button class="ctrl-btn" aria-label="Down">↓</button>
+      <button class="ctrl-btn" aria-label="Rotate CW">↻</button>
+    </div>
+
+    <div class="card" style="padding:10px 14px">
+      <div class="measure-row"><span class="label">SI (Y)</span><span class="value">0mm</span></div>
+      <div class="measure-row"><span class="label">AP (X)</span><span class="value">0mm</span></div>
+      <div class="measure-row"><span class="label">Axial Rot.</span><span class="value">0°</span></div>
+    </div>
+
+    <div class="actions-stack" style="margin-top:12px">
+      <button class="btn btn-ghost w-full">Reset Position</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Comments</div>
+    <textarea class="input" rows="2" placeholder="Add a comment…"></textarea>
+    <button class="btn btn-flat btn-sm w-full" style="margin-top:6px">Post Comment</button>
+  </aside>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="credits">
+  SchulterPlan — implantcast<br>
+  Created by Dr. Bruno Gobbato
+</div>
+
+<script src="../js/toast.js"></script>
+</body>
+</html>

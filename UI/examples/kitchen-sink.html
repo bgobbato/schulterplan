@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SchulterPlan — Kitchen Sink</title>
+  <link rel="stylesheet" href="../css/schulterplan.css" />
+  <style>
+    body { overflow: auto; padding: 32px 48px; }
+    h2 {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1.2px;
+      margin: 32px 0 12px;
+    }
+    h2:first-child { margin-top: 0; }
+    h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; }
+    .demo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .demo-block { padding: 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+    .demo-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .lead { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+    .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .swatch-tile {
+      padding: 8px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); font-size: 10px; color: var(--text-muted);
+    }
+    .swatch-tile .chip {
+      display: block; height: 36px; border-radius: var(--radius-sm);
+      margin-bottom: 6px; border: 1px solid var(--border);
+    }
+    .swatch-tile code { color: var(--text-primary); font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+  <span style="font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--primary),var(--info));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;color:transparent">SchulterPlan</span>
+  <span class="badge badge-primary">Design System Kit</span>
+</div>
+<p class="lead">Every component, in one page. Visual diff this against any new SchulterPlan-derived UI.</p>
+
+<!-- ── Color ── -->
+<h2>Color</h2>
+<div class="swatch-grid">
+  <div class="swatch-tile"><span class="chip" style="background:var(--primary)"></span><code>--primary</code><br>#17c5b0</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--primary-hover)"></span><code>--primary-hover</code><br>#14b8a6</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--primary-soft)"></span><code>--primary-soft</code></div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--accent)"></span><code>--accent</code><br>#f5a623</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--accent-soft)"></span><code>--accent-soft</code></div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--danger)"></span><code>--danger</code><br>#f31260</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--success)"></span><code>--success</code><br>#17c964</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--warning)"></span><code>--warning</code><br>#f5a524</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--info)"></span><code>--info</code><br>#7dd3fc</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--bg-surface)"></span><code>--bg-surface</code><br>#18181b</div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--bg-card)"></span><code>--bg-card</code></div>
+  <div class="swatch-tile"><span class="chip" style="background:var(--bg-glass)"></span><code>--bg-glass</code></div>
+</div>
+
+<!-- ── Typography ── -->
+<h2>Typography</h2>
+<div class="demo-block">
+  <div style="font-size:32px;font-weight:700;font-variant-numeric:tabular-nums">84<span style="font-size:18px;color:var(--text-secondary)">%</span></div>
+  <div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums">16.1°</div>
+  <div style="font-size:14px;font-weight:700;color:var(--text-primary)">Section Heading 14 / 700</div>
+  <div style="font-size:13px;color:var(--text-secondary)">Body 13 / 400 — secondary copy.</div>
+  <div style="font-size:12px;color:var(--text-muted)">Helper 12 / 400 — muted.</div>
+  <div class="section-label" style="margin:12px 0 0">Section Label</div>
+</div>
+
+<!-- ── Buttons ── -->
+<h2>Buttons</h2>
+<div class="demo-block">
+  <h3>Variants</h3>
+  <div class="demo-row">
+    <button class="btn btn-primary">Primary</button>
+    <button class="btn btn-flat">Flat</button>
+    <button class="btn btn-ghost">Ghost</button>
+    <button class="btn btn-accent">Accent</button>
+    <button class="btn btn-accent active">Accent Active</button>
+    <button class="btn btn-danger">Danger</button>
+    <button class="btn btn-primary" disabled>Disabled</button>
+  </div>
+  <h3>Small</h3>
+  <div class="demo-row">
+    <button class="btn btn-primary btn-sm">Primary</button>
+    <button class="btn btn-flat btn-sm">Flat</button>
+    <button class="btn btn-ghost btn-sm">Ghost</button>
+  </div>
+</div>
+
+<!-- ── Segmented ── -->
+<h2>Segmented Control</h2>
+<div class="demo-block">
+  <div class="segmented" role="tablist">
+    <button class="seg-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L8 6v6l-2 2v6l4-2 2 2 2-2 4 2v-6l-2-2V6l-4-4z"/></svg><span>anterior</span></button>
+    <button class="seg-btn active"><svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="12" rx="6" ry="9"/></svg><span>glenoid</span></button>
+    <button class="seg-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2v6l-3 3v6l3 5h-4l-2-5v-6l2-3V2z"/></svg><span>lateral</span></button>
+    <button class="seg-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22l-4-4h3V10H8l4-4 4 4h-3v8h3z"/></svg><span>inferior</span></button>
+  </div>
+</div>
+
+<!-- ── Badges ── -->
+<h2>Badges & Live</h2>
+<div class="demo-block">
+  <div class="demo-row">
+    <span class="badge">No case loaded</span>
+    <span class="badge badge-primary">v 1.0</span>
+    <span class="badge badge-accent"><span class="live-dot"></span> LIVE</span>
+    <span class="case-info">Case · MiriaOE-GPS (Left)</span>
+  </div>
+</div>
+
+<!-- ── Cards & measure rows ── -->
+<h2>Card with Measure Rows</h2>
+<div class="demo-grid">
+  <div class="card">
+    <div class="measure-row"><span class="label">Retroversion</span><span class="value">12.4°</span></div>
+    <div class="measure-row"><span class="label">Inferior Incl.</span><span class="value">8.1°</span></div>
+    <div class="measure-row"><span class="label">Pre-op Sublux.</span><span class="value">62%</span></div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="card-header">Implant</div>
+    <div style="padding:14px">
+      <div class="row-between"><span class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Size</span><span style="font-size:20px;font-weight:700">2 Short</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Implant grid ── -->
+<h2>Implant Selection Grid</h2>
+<div class="demo-block">
+  <div class="implant-group-label">Glenoid Cementless Anatomical</div>
+  <div class="implant-grid">
+    <div class="implant-card selected"><div class="icon" style="font-size:24px">🦴</div><span>Size 2</span><span>Short</span></div>
+    <div class="implant-card"><div class="icon" style="font-size:24px">🦴</div><span>Size 2</span><span>Long</span></div>
+    <div class="implant-card"><div class="icon" style="font-size:24px">🦴</div><span>Size 3</span><span>Short</span></div>
+    <div class="implant-card"><div class="icon" style="font-size:24px">🦴</div><span>Size 3</span><span>Long</span></div>
+  </div>
+</div>
+
+<!-- ── Controls ── -->
+<h2>Control trio & Arrow pad</h2>
+<div class="demo-grid">
+  <div class="demo-block">
+    <div class="control-row">
+      <button class="ctrl-btn">←</button>
+      <div class="ctrl-label"><div class="name">Retroversion</div><div class="value">12.4°</div></div>
+      <button class="ctrl-btn">→</button>
+    </div>
+    <div class="control-row">
+      <button class="ctrl-btn">↓</button>
+      <div class="ctrl-label"><div class="name">Inferior Incl.</div><div class="value">8.1°</div></div>
+      <button class="ctrl-btn">↑</button>
+    </div>
+    <div class="control-row">
+      <button class="ctrl-btn">−</button>
+      <div class="ctrl-label"><div class="name">Depth</div><div class="value">0mm</div></div>
+      <button class="ctrl-btn">+</button>
+    </div>
+  </div>
+
+  <div class="demo-block">
+    <div class="arrow-pad">
+      <div class="empty"></div><button class="ctrl-btn">↑</button><div class="empty"></div>
+      <button class="ctrl-btn">←</button><div class="empty"></div><button class="ctrl-btn">→</button>
+      <button class="ctrl-btn">↺</button><button class="ctrl-btn">↓</button><button class="ctrl-btn">↻</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Inputs ── -->
+<h2>Inputs</h2>
+<div class="demo-block" style="max-width:480px">
+  <label class="section-label" for="ks-patient">Patient ID</label>
+  <input id="ks-patient" class="input" type="text" placeholder="e.g., MR-1029" />
+  <label class="section-label" for="ks-notes">Notes</label>
+  <textarea id="ks-notes" class="input" rows="3" placeholder="Add a comment…"></textarea>
+  <label class="section-label" for="ks-side">Side</label>
+  <select id="ks-side" class="input"><option>Left</option><option>Right</option></select>
+</div>
+
+<!-- ── Scenarios ── -->
+<h2>Scenarios</h2>
+<div class="demo-block" style="max-width:360px">
+  <div class="scenario-list">
+    <button class="scenario-btn">Scenario 1: empty</button>
+    <button class="scenario-btn has-data">Scenario 2: Retro +2°, SI −1mm</button>
+    <button class="scenario-btn">Scenario 3: empty</button>
+  </div>
+</div>
+
+<!-- ── Measurements ── -->
+<h2>Measurement List</h2>
+<div class="demo-block" style="max-width:360px">
+  <div class="measure-tool-section">
+    <div class="measure-tool-header">
+      <button class="btn btn-ghost btn-sm">📏 Measure</button>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px">Clear All</button>
+    </div>
+    <div class="measure-list">
+      <div class="measure-item">
+        <span class="measure-dot" style="background:#00ccff"></span>
+        <span class="measure-label">Inferior</span>
+        <span class="measure-value">16.1 mm</span>
+        <span class="measure-delete">✕</span>
+      </div>
+      <div class="measure-item">
+        <span class="measure-dot" style="background:#ff6644"></span>
+        <span class="measure-label">Anterior</span>
+        <span class="measure-value">5.4 mm</span>
+        <span class="measure-delete">✕</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<h2>Toast</h2>
+<div class="demo-block">
+  <button class="btn btn-primary" onclick="showToast('Case loaded.')">Default toast</button>
+  <button class="btn btn-flat" onclick="showToast('Saved.', { variant: 'primary' })">Primary</button>
+  <button class="btn btn-accent" onclick="showToast('Auto-measure complete.', { variant: 'accent' })">Accent</button>
+  <button class="btn btn-danger" onclick="showToast('Failed to import file.', { variant: 'danger' })">Danger</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="credits">
+  SchulterPlan — implantcast<br>
+  Created by Dr. Bruno Gobbato
+</div>
+
+<script src="../js/toast.js"></script>
+<script src="../js/ui-helpers.js"></script>
+</body>
+</html>

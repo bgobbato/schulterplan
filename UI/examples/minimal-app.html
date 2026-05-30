@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SchulterPlan — Minimal Example</title>
+  <link rel="stylesheet" href="../css/schulterplan.css" />
+</head>
+<body>
+
+<div style="max-width:520px;margin:64px auto;padding:24px">
+
+  <div class="topbar-logo" style="margin-bottom:8px">
+    <h1 style="font-size:22px">SchulterPlan</h1>
+  </div>
+  <p style="color:var(--text-secondary);margin-bottom:24px">
+    The smallest possible app applying the design system.
+  </p>
+
+  <div class="section-label">Patient</div>
+  <input class="input" type="text" placeholder="Patient name" style="margin-bottom:12px" />
+
+  <div class="section-label">Side</div>
+  <div class="segmented" style="margin-bottom:24px">
+    <button class="seg-btn active"><span>left</span></button>
+    <button class="seg-btn"><span>right</span></button>
+  </div>
+
+  <div class="actions-stack">
+    <button class="btn btn-primary w-full" onclick="showToast('Case created.', { variant: 'primary' })">
+      Create Case
+    </button>
+    <button class="btn btn-ghost w-full">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="../js/toast.js"></script>
+<script src="../js/ui-helpers.js"></script>
+</body>
+</html>

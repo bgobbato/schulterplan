@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SchulterPlan UI — Index</title>
+  <link rel="stylesheet" href="css/schulterplan.css" />
+  <style>
+    body { overflow: auto; padding: 48px 32px; }
+    .container { max-width: 720px; margin: 0 auto; }
+    .doc-link {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all var(--transition);
+      margin-bottom: 8px;
+    }
+    .doc-link:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    .doc-link .doc-title { font-weight: 600; }
+    .doc-link .doc-desc { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+    .doc-link .arrow { color: var(--primary); }
+    h2 {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1.2px;
+      margin: 32px 0 12px;
+    }
+    h2:first-of-type { margin-top: 24px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+    <span style="font-size:28px;font-weight:700;letter-spacing:-0.3px;background:linear-gradient(135deg,var(--primary),var(--info));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;color:transparent">SchulterPlan</span>
+    <span class="badge badge-primary">UI Kit</span>
+  </div>
+  <p style="font-size:13px;color:var(--text-secondary);margin-bottom:24px">
+    Self-contained design system. Drop this folder into any project, link <code style="color:var(--primary)">css/schulterplan.css</code>, and inherit the look.
+  </p>
+
+  <h2>Read first</h2>
+  <a class="doc-link" href="README.md">
+    <span><span class="doc-title">README.md</span><div class="doc-desc">What this folder is, how to use it</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="AGENT_INSTRUCTIONS.md">
+    <span><span class="doc-title">AGENT_INSTRUCTIONS.md</span><div class="doc-desc">How an LLM should consume this folder</div></span>
+    <span class="arrow">→</span>
+  </a>
+
+  <h2>Documentation</h2>
+  <a class="doc-link" href="BRAND.md">
+    <span><span class="doc-title">BRAND.md</span><div class="doc-desc">Identity, voice, microcopy rules</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="DESIGN_SYSTEM.md">
+    <span><span class="doc-title">DESIGN_SYSTEM.md</span><div class="doc-desc">Colors, type, spacing, motion — the full spec</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="COMPONENTS.md">
+    <span><span class="doc-title">COMPONENTS.md</span><div class="doc-desc">Every component, its API, do's and don'ts</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="PATTERNS.md">
+    <span><span class="doc-title">PATTERNS.md</span><div class="doc-desc">Layouts and screen compositions</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="ACCESSIBILITY.md">
+    <span><span class="doc-title">ACCESSIBILITY.md</span><div class="doc-desc">Contrast, focus, keyboard, screen readers</div></span>
+    <span class="arrow">→</span>
+  </a>
+
+  <h2>Live previews</h2>
+  <a class="doc-link" href="examples/kitchen-sink.html">
+    <span><span class="doc-title">Kitchen Sink</span><div class="doc-desc">Every component in one page (use this to visual-diff)</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="examples/minimal-app.html">
+    <span><span class="doc-title">Minimal App</span><div class="doc-desc">Smallest possible app applying the system</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="templates/planner-3col-layout.html">
+    <span><span class="doc-title">Planner Template</span><div class="doc-desc">3-column app shell (sidebar / canvas / sidebar)</div></span>
+    <span class="arrow">→</span>
+  </a>
+  <a class="doc-link" href="templates/dashboard-layout.html">
+    <span><span class="doc-title">Dashboard Template</span><div class="doc-desc">6-viewport surgical dashboard shell</div></span>
+    <span class="arrow">→</span>
+  </a>
+
+  <h2>Build artifacts</h2>
+  <a class="doc-link" href="tokens/tokens.css"><span><span class="doc-title">tokens/tokens.css</span><div class="doc-desc">All design tokens as :root CSS variables</div></span><span class="arrow">→</span></a>
+  <a class="doc-link" href="tokens/tokens.json"><span><span class="doc-title">tokens/tokens.json</span><div class="doc-desc">Machine-readable token set (Style-Dictionary compatible)</div></span><span class="arrow">→</span></a>
+  <a class="doc-link" href="tokens/tokens.scss"><span><span class="doc-title">tokens/tokens.scss</span><div class="doc-desc">SCSS variables</div></span><span class="arrow">→</span></a>
+  <a class="doc-link" href="css/schulterplan.css"><span><span class="doc-title">css/schulterplan.css</span><div class="doc-desc">Single-file drop-in stylesheet</div></span><span class="arrow">→</span></a>
+  <a class="doc-link" href="css/tailwind.config.cjs"><span><span class="doc-title">css/tailwind.config.cjs</span><div class="doc-desc">Tailwind preset mirroring the tokens</div></span><span class="arrow">→</span></a>
+
+</div>
+
+<div class="credits">
+  SchulterPlan — implantcast<br>
+  Created by Dr. Bruno Gobbato
+</div>
+
+</body>
+</html>
