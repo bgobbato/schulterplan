@@ -3863,6 +3863,17 @@ async function initMPR() {
     addLandmarkMarkers();          // coord validation
     updateImplantOverlayMesh();    // (currently no-op while validating)
     drawMPROverlay();
+
+    // Hook NiiVue's drawScene so our overlay refreshes on ANY change
+    // (zoom, pan, brightness/contrast, slice scroll — all funnel through drawScene).
+    const _origDrawScene = nv.drawScene.bind(nv);
+    nv.drawScene = function (...args) {
+      const r = _origDrawScene(...args);
+      // schedule overlay redraw after NiiVue finishes (next microtask)
+      Promise.resolve().then(() => drawMPROverlay());
+      return r;
+    };
+
     loadingEl.classList.add('hidden');
   } catch (err) {
     console.error('[MPR] init failed:', err);
