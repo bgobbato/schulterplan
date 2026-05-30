@@ -4009,9 +4009,6 @@ function updateImplantOverlayMesh() {
     ov.implantLines.material.dispose();
     ov.implantLines = null;
   }
-  // Skip implant overlay while we're validating landmarks (uncomment to re-enable)
-  return;
-  // eslint-disable-next-line no-unreachable
   if (!implantMesh) return;
   // Find the actual Mesh geometry inside the implant Group
   let geom = null;
