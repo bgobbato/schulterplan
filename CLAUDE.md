@@ -14,22 +14,51 @@ Implantcast Agilon. Single HTML file + Three.js via importmap. Sem build step.
 - **`MPR_PLAN.md`** v2 — Plano detalhado da implementação MPR (CT). Status: **MVP 1 OK** (Phase 0-2 + coord fix). Branch ativo: `mpr-dev`. Arquivo: `test-heroui-ct.html`.
 - **`MPR_HAR_ANALYSIS_REPORT.md`** — Análise CustomedAI (referência arquitetural, Phase 7 Option D).
 
-## MPR — estado atual (30/maio/2026)
-Branch `mpr-dev` (head `4872e38`). `test-heroui.html` original **intacto**. Funciona:
+## MPR — estado atual (30/maio/2026 — MVP 2 OK)
+Branch `mpr-dev` (head `c1f26a5`). `test-heroui.html` original **intacto**. Funciona:
 - Botão `CT` na topbar abre coluna 400px com NiiVue 0.69 + NIfTI 64MB (gitignored em `data/`)
 - Layout `MULTIPLANAR_TYPE.COLUMN` (axial/coronal/sagittal empilhados)
 - Scroll wheel por linha (top=Z axial, mid=Y coronal, bot=X sagittal)
-- Crosshair verde em `glenoid_center` exato (X invertido entre pipeline e RAS NiiVue, resolvido via `pipelineToNiiVueMM`)
+- Crosshair verde em `glenoid_center` exato
 - Toolbar scroll/pan/zoom/W-L
 - Label em coord pipeline
+- **Overlay do implante (Phase 4 Option D simplificada)**:
+  - Canvas `#ct-overlay` transparente sobre o NiiVue
+  - Three.js renderer próprio + 3 ortho cameras (uma por slice)
+  - `EdgesGeometry` (laranja) do implante projetada em cada quadrante
+  - Câmera ANCORADA no centro do volume (não no crosshair — NiiVue não pan)
+  - Monkey-patched `updateImplantPose()` + `setImplant()` para auto-refresh
+- **6 landmarks da escápula** plotados como esferas coloridas (validação visual)
 
-**Próximas fases (recomendado)**: Phase 4 **Option D direto** (skip Option A), simplified — Three.js render target + canvas overlay, ortho camera por slice. ~2.5h. Phase 5 sync com adjustments. Detalhes em `MPR_PLAN.md`.
+**Conversão de coordenadas pipeline → NiiVue (CRÍTICO)**:
+Pipeline xyz_mm está em **LPS** (DICOM convention). NiiVue lê NIfTI como **RAS**.
+- `pipelineToNiiVueMM([x, y, z])` = `[-x, -y, z]` (flip X e Y, Z inalterado)
+- `sceneToNiiVue` matrix (para implante em scene re-centered):
+  ```
+  [-1  0  0  -gcX_pipe]
+  [ 0 -1  0  -gcY_pipe]
+  [ 0  0  1   gcZ_pipe]
+  [ 0  0  0     1     ]
+  ```
+- Validado empiricamente plotando trigonum + 4 rim points
+
+**Limitação conhecida**: ao usar zoom do NiiVue, overlay perde alinhamento
+(ortho camera usa fov fixo do volume). Fix futuro — ler `volScaleMultiplier`
+ou pan/zoom state do NiiVue por quadrante.
+
+**Próximas fases**: Phase 4C (clipping plane real para mostrar só cross-section ao invés
+de full silhouette), Phase 6 (polish), Phase 7 (full Option D com supersampling).
 
 **Lições aprendidas**:
 - NiiVue API `moveCrosshairInVox(dx, dy, dz)` é scalars, NÃO array
-- `MULTIPLANAR_TYPE.GRID` (default) deixa 4° quadrante vazio mesmo com `multiplanarShowRender: NEVER` — usar COLUMN para coluna estreita
-- Pipeline `xyz_mm` e NiiVue RAS têm X com sinal oposto
-- Sempre `clampCrosshairFrac()` + `drawScene()` após `moveCrosshairInVox` para evitar slices sumirem fora do volume
+- `MULTIPLANAR_TYPE.GRID` (default) deixa 4° quadrante vazio mesmo com `multiplanarShowRender: NEVER` — usar COLUMN
+- Pipeline é LPS, NiiVue é RAS — flip X e Y para converter (Z mantém)
+- Câmera ortho do overlay DEVE ancorar no centro do volume (NiiVue não pan slices)
+- `nv.screenSlices[i]` expõe `leftTopWidthHeight` e `fovMM` — usar pra alinhar cameras
+- `WebGLRenderer.readPixels` precisa de buffer ativo (após render) — pixels podem
+  parecer "0" se ler depois do swap; testar com fresh redraw
+- Three.js `function` declarations são reassignáveis em módulos — permite monkey-patch
+  de `updateImplantPose` para refresh do overlay
 
 ## Arquivos Principais
 
