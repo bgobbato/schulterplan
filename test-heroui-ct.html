@@ -3782,15 +3782,15 @@ const MPR = {
 window.MPR = MPR;             // for debugging from console
 
 /* Pipeline xyz_mm ↔ NiiVue mm conversion.
-   Empirically the X axis is FLIPPED between the two frames (the pipeline meshes
-   live in the scapula OBJ space, while NiiVue reads the NIfTI as RAS). Y and Z
-   match within sub-mm rounding. We isolate this in helpers so the rest of the
-   MPR code uses NiiVue coords directly. */
+   The pipeline is in LPS (DICOM convention: +X = patient's left, +Y = posterior).
+   NiiVue reads NIfTI as RAS (+X = right, +Y = anterior). So X and Y are flipped,
+   Z (superior) matches. Validated empirically by plotting the 6 scapula landmarks
+   and checking they hit anatomical positions in all 3 slice planes. */
 function pipelineToNiiVueMM(xyz) {
-  return [-xyz[0], xyz[1], xyz[2]];
+  return [-xyz[0], -xyz[1], xyz[2]];
 }
 function niiVueToPipelineMM(xyz) {
-  return [-xyz[0], xyz[1], xyz[2]];
+  return [-xyz[0], -xyz[1], xyz[2]];
 }
 
 // Clamp a fractional crosshair position to the volume bounds [0, 1] per axis
@@ -3947,17 +3947,17 @@ function initMPROverlay() {
   };
 
   // Pre-compute the scene → NiiVue transformation matrix.
-  // scene = re-centered (glenoid at origin); pipeline = raw NIfTI mm;
-  // NiiVue = RAS (X axis flipped vs pipeline). So:
+  // scene = re-centered (glenoid at origin); pipeline = LPS xyz_mm;
+  // NiiVue = RAS (X and Y flipped vs LPS, Z aligned). So:
   //   pipeline = scene + glenoid_center_pipeline
-  //   niivue   = (-pipeline.x, pipeline.y, pipeline.z)
+  //   niivue   = (-pipeline.x, -pipeline.y, pipeline.z)
   const gc_pipe = state.planning?._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
   if (gc_pipe) {
     const m = new THREE.Matrix4().set(
-      -1, 0, 0, -gc_pipe[0],
-       0, 1, 0,  gc_pipe[1],
-       0, 0, 1,  gc_pipe[2],
-       0, 0, 0,           1
+      -1,  0, 0, -gc_pipe[0],
+       0, -1, 0, -gc_pipe[1],
+       0,  0, 1,  gc_pipe[2],
+       0,  0, 0,           1
     );
     MPR.overlay.sceneToNiiVue = m;
   }
