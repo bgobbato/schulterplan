@@ -815,6 +815,13 @@
     flex: 1; position: relative; min-height: 0;
   }
   #ct-canvas { display: block; width: 100%; height: 100%; }
+  /* Implant contour overlay — transparent canvas above NiiVue */
+  #ct-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;  /* clicks/scroll go to NiiVue canvas underneath */
+    z-index: 2;
+  }
   #ct-loading {
     position: absolute; inset: 0; display: flex; align-items: center;
     justify-content: center; color: var(--text-muted); font-size: 12px;
@@ -1134,6 +1141,7 @@
     </div>
     <div id="ct-canvas-wrap">
       <canvas id="ct-canvas"></canvas>
+      <canvas id="ct-overlay"></canvas>
       <div id="ct-loading">Loading CT volume…</div>
     </div>
     <div class="ct-info">
@@ -3851,6 +3859,9 @@ async function initMPR() {
 
     setupMPRToolbar();
     updateMPRInfo();
+    initMPROverlay();
+    updateImplantOverlayMesh();
+    drawMPROverlay();
     loadingEl.classList.add('hidden');
   } catch (err) {
     console.error('[MPR] init failed:', err);
@@ -3895,6 +3906,150 @@ function updateMPRInfo() {
   } catch (e) { /* before first draw */ }
 }
 
+/* ── Implant contour overlay (Phase 4 — Option D simplified) ──
+   Separate Three.js renderer drawing into #ct-overlay (transparent canvas
+   above NiiVue). One scene with the implant + a test marker, three
+   orthographic cameras matching NiiVue's per-slice viewports.
+*/
+function initMPROverlay() {
+  if (MPR.overlay) return;
+  const overlayCanvas = document.getElementById('ct-overlay');
+  const nvCanvas = document.getElementById('ct-canvas');
+  overlayCanvas.width  = nvCanvas.width;
+  overlayCanvas.height = nvCanvas.height;
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas: overlayCanvas, antialias: true, alpha: true,
+  });
+  renderer.setClearColor(0x000000, 0);
+  renderer.autoClear = false;        // we clear per viewport ourselves
+  renderer.setScissorTest(true);
+
+  const scene = new THREE.Scene();
+  // No lights — using MeshBasicMaterial (unlit) for crisp outlines
+
+  MPR.overlay = {
+    renderer, scene,
+    cameras: {
+      axial:    new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
+      coronal:  new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
+      sagittal: new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
+    },
+    implantLines: null,   // current LineSegments for the implant contour
+    sceneToNiiVue: null,  // 4x4 matrix scene → NiiVue mm
+  };
+
+  // Pre-compute the scene → NiiVue transformation matrix.
+  // scene = re-centered (glenoid at origin); pipeline = raw NIfTI mm;
+  // NiiVue = RAS (X axis flipped vs pipeline). So:
+  //   pipeline = scene + glenoid_center_pipeline
+  //   niivue   = (-pipeline.x, pipeline.y, pipeline.z)
+  const gc_pipe = state.planning?._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+  if (gc_pipe) {
+    const m = new THREE.Matrix4().set(
+      -1, 0, 0, -gc_pipe[0],
+       0, 1, 0,  gc_pipe[1],
+       0, 0, 1,  gc_pipe[2],
+       0, 0, 0,           1
+    );
+    MPR.overlay.sceneToNiiVue = m;
+  }
+}
+
+/* Build / refresh the implant contour (EdgesGeometry wireframe) inside
+   the overlay scene. Called whenever the implant model or its pose changes. */
+function updateImplantOverlayMesh() {
+  const ov = MPR.overlay;
+  if (!ov || !ov.sceneToNiiVue) return;
+  // Remove previous contour
+  if (ov.implantLines) {
+    ov.scene.remove(ov.implantLines);
+    ov.implantLines.geometry.dispose();
+    ov.implantLines.material.dispose();
+    ov.implantLines = null;
+  }
+  if (!implantMesh) return;
+  // Find the actual Mesh geometry inside the implant Group
+  let geom = null;
+  implantMesh.traverse(c => { if (!geom && c.isMesh && c.geometry) geom = c.geometry; });
+  if (!geom) return;
+
+  // EdgesGeometry: only sharp edges (angle threshold 20°) — clean contour look
+  const edges = new THREE.EdgesGeometry(geom, 20);
+  const mat = new THREE.LineBasicMaterial({
+    color: 0xff7a00, transparent: true, opacity: 0.95,
+  });
+  const lines = new THREE.LineSegments(edges, mat);
+  lines.matrixAutoUpdate = false;
+  // Final transform: sceneToNiiVue × implant.matrixWorld
+  implantMesh.updateMatrixWorld(true);
+  lines.matrix.multiplyMatrices(ov.sceneToNiiVue, implantMesh.matrixWorld);
+  lines.matrixWorldNeedsUpdate = true;
+  ov.scene.add(lines);
+  ov.implantLines = lines;
+}
+
+function drawMPROverlay() {
+  const nv = MPR.nv;
+  const ov = MPR.overlay;
+  if (!nv || !ov || !nv.screenSlices?.length) return;
+
+  // Re-sync canvas size with NiiVue (in case NiiVue resized internally)
+  const nvCanvas = nv.gl.canvas;
+  const ovCanvas = ov.renderer.domElement;
+  if (ovCanvas.width !== nvCanvas.width || ovCanvas.height !== nvCanvas.height) {
+    ovCanvas.width  = nvCanvas.width;
+    ovCanvas.height = nvCanvas.height;
+    ov.renderer.setSize(nvCanvas.width, nvCanvas.height, false);
+  }
+
+  const ch_mm = nv.frac2mm(nv.scene.crosshairPos); // RAS / NiiVue mm
+  const cx = ch_mm[0], cy = ch_mm[1], cz = ch_mm[2];
+  const canvasH = ovCanvas.height;
+
+  // Clear entire overlay first
+  ov.renderer.setViewport(0, 0, ovCanvas.width, canvasH);
+  ov.renderer.setScissor(0, 0, ovCanvas.width, canvasH);
+  ov.renderer.clear(true, true, true);
+
+  for (const s of nv.screenSlices) {
+    const [px, py, pw, ph] = s.leftTopWidthHeight;
+    const [fovX, fovY] = s.fovMM;
+    // NiiVue uses top-left origin; WebGL viewport uses bottom-left
+    const vp_y = canvasH - py - ph;
+
+    let cam;
+    if (s.axCorSag === 0) {
+      // AXIAL: looking down +Z onto X-Y plane
+      cam = ov.cameras.axial;
+      cam.position.set(cx, cy, cz + 500);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(cx, cy, cz);
+    } else if (s.axCorSag === 1) {
+      // CORONAL: looking along +Y onto X-Z plane
+      cam = ov.cameras.coronal;
+      cam.position.set(cx, cy - 500, cz);
+      cam.up.set(0, 0, 1);
+      cam.lookAt(cx, cy, cz);
+    } else {
+      // SAGITTAL: looking along +X onto Y-Z plane
+      cam = ov.cameras.sagittal;
+      cam.position.set(cx + 500, cy, cz);
+      cam.up.set(0, 0, 1);
+      cam.lookAt(cx, cy, cz);
+    }
+    cam.left   = -fovX / 2;
+    cam.right  =  fovX / 2;
+    cam.top    =  fovY / 2;
+    cam.bottom = -fovY / 2;
+    cam.updateProjectionMatrix();
+
+    ov.renderer.setViewport(px, vp_y, pw, ph);
+    ov.renderer.setScissor(px, vp_y, pw, ph);
+    ov.renderer.render(ov.scene, cam);
+  }
+}
+
 // Scroll wheel → change slice in the row under the cursor
 // COLUMN layout: row 0 = axial (±Z), row 1 = coronal (±Y), row 2 = sagittal (±X)
 document.getElementById('ct-canvas').addEventListener('wheel', (e) => {
@@ -3914,7 +4069,33 @@ document.getElementById('ct-canvas').addEventListener('wheel', (e) => {
   clampCrosshairFrac();
   MPR.nv.drawScene();
   updateMPRInfo();
+  drawMPROverlay();
 }, { passive: false });
+
+// Monkey-patch updateImplantPose: refresh the MPR contour whenever the
+// implant pose changes (retroversion / inclination / depth / translation).
+// Function declarations are reassignable bindings in modules, and the existing
+// click handlers do a NAME lookup each call so our wrapper is hit.
+const _origUpdateImplantPose = updateImplantPose;
+// eslint-disable-next-line no-func-assign
+updateImplantPose = function () {
+  _origUpdateImplantPose.apply(this, arguments);
+  if (MPR.overlay) {
+    updateImplantOverlayMesh();
+    if (MPR.ctOn) drawMPROverlay();
+  }
+};
+
+// Also refresh contour after a new implant model loads
+const _origSetImplant = setImplant;
+// eslint-disable-next-line no-func-assign
+setImplant = async function () {
+  await _origSetImplant.apply(this, arguments);
+  if (MPR.overlay) {
+    updateImplantOverlayMesh();
+    if (MPR.ctOn) drawMPROverlay();
+  }
+};
 
 // Toggle CT column open/closed via topbar "CT" button
 document.getElementById('btn-ct').addEventListener('click', () => {
