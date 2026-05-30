@@ -3928,6 +3928,11 @@ function initMPROverlay() {
   const scene = new THREE.Scene();
   // No lights — using MeshBasicMaterial (unlit) for crisp outlines
 
+  // Volume centre in NiiVue mm — used as the camera position for each slice's
+  // in-plane axes (NiiVue displays the FULL volume per slice; the view never
+  // pans with the crosshair, so neither should our overlay camera).
+  const volCenter = MPR.nv.frac2mm([0.5, 0.5, 0.5]);
+
   MPR.overlay = {
     renderer, scene,
     cameras: {
@@ -3937,6 +3942,7 @@ function initMPROverlay() {
     },
     implantLines: null,   // current LineSegments for the implant contour
     sceneToNiiVue: null,  // 4x4 matrix scene → NiiVue mm
+    volCenter: [volCenter[0], volCenter[1], volCenter[2]],
   };
 
   // Pre-compute the scene → NiiVue transformation matrix.
@@ -4005,6 +4011,7 @@ function drawMPROverlay() {
 
   const ch_mm = nv.frac2mm(nv.scene.crosshairPos); // RAS / NiiVue mm
   const cx = ch_mm[0], cy = ch_mm[1], cz = ch_mm[2];
+  const [vcx, vcy, vcz] = ov.volCenter; // volume centre — frame stays put
   const canvasH = ovCanvas.height;
 
   // Clear entire overlay first
@@ -4020,23 +4027,24 @@ function drawMPROverlay() {
 
     let cam;
     if (s.axCorSag === 0) {
-      // AXIAL: looking down +Z onto X-Y plane
+      // AXIAL: looking down +Z onto X-Y plane.
+      // Camera is at the VOLUME centre in X-Y; the slice depth (Z) follows the crosshair.
       cam = ov.cameras.axial;
-      cam.position.set(cx, cy, cz + 500);
+      cam.position.set(vcx, vcy, cz + 500);
       cam.up.set(0, 1, 0);
-      cam.lookAt(cx, cy, cz);
+      cam.lookAt(vcx, vcy, cz);
     } else if (s.axCorSag === 1) {
       // CORONAL: looking along +Y onto X-Z plane
       cam = ov.cameras.coronal;
-      cam.position.set(cx, cy - 500, cz);
+      cam.position.set(vcx, cy - 500, vcz);
       cam.up.set(0, 0, 1);
-      cam.lookAt(cx, cy, cz);
+      cam.lookAt(vcx, cy, vcz);
     } else {
       // SAGITTAL: looking along +X onto Y-Z plane
       cam = ov.cameras.sagittal;
-      cam.position.set(cx + 500, cy, cz);
+      cam.position.set(cx + 500, vcy, vcz);
       cam.up.set(0, 0, 1);
-      cam.lookAt(cx, cy, cz);
+      cam.lookAt(cx, vcy, vcz);
     }
     cam.left   = -fovX / 2;
     cam.right  =  fovX / 2;
