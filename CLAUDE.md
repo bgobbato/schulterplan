@@ -14,21 +14,29 @@ Implantcast Agilon. Single HTML file + Three.js via importmap. Sem build step.
 - **`MPR_PLAN.md`** v2 — Plano detalhado da implementação MPR (CT). Status: **MVP 1 OK** (Phase 0-2 + coord fix). Branch ativo: `mpr-dev`. Arquivo: `test-heroui-ct.html`.
 - **`MPR_HAR_ANALYSIS_REPORT.md`** — Análise CustomedAI (referência arquitetural, Phase 7 Option D).
 
-## MPR — estado atual (30/maio/2026 — MVP 2 OK)
-Branch `mpr-dev` (head `c1f26a5`). `test-heroui.html` original **intacto**. Funciona:
+## MPR — estado atual (31/maio/2026 — MVP 2 LIMPO)
+Branch `mpr-dev`. `test-heroui.html` original **intacto**. Funciona:
 - Botão `CT` na topbar abre coluna 400px com NiiVue 0.69 + NIfTI 64MB (gitignored em `data/`)
 - Layout `MULTIPLANAR_TYPE.COLUMN` (axial/coronal/sagittal empilhados)
 - Scroll wheel por linha (top=Z axial, mid=Y coronal, bot=X sagittal)
 - Crosshair verde em `glenoid_center` exato
-- Toolbar scroll/pan/zoom/W-L
-- Label em coord pipeline
-- **Overlay do implante (Phase 4 Option D simplificada)**:
+- **Toolbar removida** — MPR é view-only (sem W/L, sem pan, sem zoom). Wheel scrolla, pronto.
+- Label de coord pipeline + label W/L (read-only) embaixo
+- **Overlay do implante (Phase 4 Option D simplificada — silhueta cheia)**:
   - Canvas `#ct-overlay` transparente sobre o NiiVue
   - Three.js renderer próprio + 3 ortho cameras (uma por slice)
   - `EdgesGeometry` (laranja) do implante projetada em cada quadrante
   - Câmera ANCORADA no centro do volume (não no crosshair — NiiVue não pan)
   - Monkey-patched `updateImplantPose()` + `setImplant()` para auto-refresh
-- **6 landmarks da escápula** plotados como esferas coloridas (validação visual)
+- **Landmarks removidos** — coords validados, esferas coloridas deletadas do código
+
+**Decisões de design tomadas (31/maio/2026)**:
+- **Zoom e pan no NiiVue NÃO serão suportados**. Tentativa de implementar (canvasPos2frac
+  para tracking de viewport center + drag handler customizado) quebrou alinhamento do
+  implante. Revertido. MPR fica fixo, sem interação a não ser scroll de slice.
+- **W/L não será ajustável**. É só visualização — usar defaults do NiiVue.
+- **Próxima feature (Phase 4C) será em arquivo separado** (`test-heroui-ct-v2.html` ou
+  similar) para não interferir no MVP 2 estável atual.
 
 **Conversão de coordenadas pipeline → NiiVue (CRÍTICO)**:
 Pipeline xyz_mm está em **LPS** (DICOM convention). NiiVue lê NIfTI como **RAS**.
@@ -42,12 +50,13 @@ Pipeline xyz_mm está em **LPS** (DICOM convention). NiiVue lê NIfTI como **RAS
   ```
 - Validado empiricamente plotando trigonum + 4 rim points
 
-**Limitação conhecida**: ao usar zoom do NiiVue, overlay perde alinhamento
-(ortho camera usa fov fixo do volume). Fix futuro — ler `volScaleMultiplier`
-ou pan/zoom state do NiiVue por quadrante.
+**Limitação removida** (por decisão): zoom/pan do NiiVue desabilitados — não há
+mais "perda de alinhamento" porque o usuário não pode mais zoomar/pannar.
 
-**Próximas fases**: Phase 4C (clipping plane real para mostrar só cross-section ao invés
-de full silhouette), Phase 6 (polish), Phase 7 (full Option D com supersampling).
+**Próxima fase**: Phase 4C — **clipping plane real** (interseção plano × malha) para
+mostrar só o cross-section do implante naquele slice, em vez da silhueta cheia.
+Algoritmo escolhido: intersecção plano-triângulo em JS (~10k tris × 3 planos ≈ <5ms).
+Será implementada em **arquivo separado** para não quebrar o MVP 2 atual.
 
 **Lições aprendidas**:
 - NiiVue API `moveCrosshairInVox(dx, dy, dz)` é scalars, NÃO array
@@ -59,6 +68,12 @@ de full silhouette), Phase 6 (polish), Phase 7 (full Option D com supersampling)
   parecer "0" se ler depois do swap; testar com fresh redraw
 - Three.js `function` declarations são reassignáveis em módulos — permite monkey-patch
   de `updateImplantPose` para refresh do overlay
+- **NiiVue 0.69 drag modes**: `contrast=1, measurement=2, pan=3, callbackOnly=5,
+  roiSelection=6, angle=7, crosshair=8, windowing=9, none=0` — **não existe `zoom`**
+  como drag mode (zoom é wheel-based no NiiVue, controlado por `pan2Dxyzmm[3]`)
+- **canvasPos2frac + frac2mm** pra tracking de viewport center: parece a abordagem
+  certa pra suportar zoom/pan, mas na prática quebra o alinhamento do implante
+  (camera ortho do overlay descasa do que NiiVue mostra). Não usar.
 
 ## Arquivos Principais
 

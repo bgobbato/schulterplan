@@ -1116,28 +1116,8 @@
   <div class="ct-column" id="ct-column">
     <div class="ct-header">
       <span class="ct-title">CT MPR</span>
-      <div class="ct-toolbar" id="ct-toolbar">
-        <button class="ct-tool active" data-tool="scroll" title="Scroll slices (default)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20M5 9l7-7 7 7M5 15l7 7 7-7"/>
-          </svg>
-        </button>
-        <button class="ct-tool" data-tool="pan" title="Pan">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 11V6a2 2 0 0 0-4 0v5M14 11V4a2 2 0 0 0-4 0v7M10 11V6a2 2 0 0 0-4 0v9M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2a8 8 0 0 1-7.5-9.4L4 12"/>
-          </svg>
-        </button>
-        <button class="ct-tool" data-tool="zoom" title="Zoom">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/>
-          </svg>
-        </button>
-        <button class="ct-tool" data-tool="wl" title="Window / Level (contrast)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18"/>
-          </svg>
-        </button>
-      </div>
+      <!-- Toolbar removed: scroll is implicit (wheel), no W/L / pan / zoom. -->
+      <div class="ct-toolbar" id="ct-toolbar"></div>
     </div>
     <div id="ct-canvas-wrap">
       <canvas id="ct-canvas"></canvas>
@@ -3860,8 +3840,7 @@ async function initMPR() {
     setupMPRToolbar();
     updateMPRInfo();
     initMPROverlay();
-    addLandmarkMarkers();          // coord validation
-    updateImplantOverlayMesh();    // (currently no-op while validating)
+    updateImplantOverlayMesh();
     drawMPROverlay();
 
     // Hook NiiVue's drawScene so our overlay refreshes on ANY change
@@ -3881,25 +3860,10 @@ async function initMPR() {
   }
 }
 
-function setupMPRToolbar() {
-  const tools = document.querySelectorAll('.ct-tool');
-  tools.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tools.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (!MPR.nv) return;
-      const tool = btn.dataset.tool;
-      // NiiVue's dragModes enum is on the instance
-      const modes = MPR.nv.dragModes || {};
-      switch (tool) {
-        case 'scroll': MPR.nv.opts.dragMode = modes.none ?? 0; break;
-        case 'pan':    MPR.nv.opts.dragMode = modes.pan ?? 1; break;
-        case 'zoom':   MPR.nv.opts.dragMode = modes.zoom ?? 3; break;
-        case 'wl':     MPR.nv.opts.dragMode = modes.contrast ?? 2; break;
-      }
-    });
-  });
-}
+// MPR is view-only: no W/L, no zoom, no pan. Wheel scrolls slices, that's it.
+// Kept as a no-op so any future call site doesn't break.
+MPR.activeTool = 'scroll';
+function setupMPRToolbar() { /* intentionally empty — no interactive tools */ }
 
 function updateMPRInfo() {
   const nv = MPR.nv;
@@ -3971,40 +3935,6 @@ function initMPROverlay() {
        0,  0, 0,           1
     );
     MPR.overlay.sceneToNiiVue = m;
-  }
-}
-
-/* Place colored sphere markers at known scapula landmarks. Used to visually
-   verify the pipeline → NiiVue coordinate alignment BEFORE trusting the
-   implant overlay. Each landmark gets a distinct color. */
-function addLandmarkMarkers() {
-  const ov = MPR.overlay;
-  if (!ov) return;
-  const lm = state.planning?._pipelinePayload?.landmarks?.scapula;
-  if (!lm) return;
-  const points = [
-    { key: 'glenoid_center',    color: 0xffaa00, label: 'GC (orange)' },
-    { key: 'trigonum',          color: 0xffffff, label: 'Trigonum (white)' },
-    { key: 'glenoid_anterior',  color: 0x00ccff, label: 'Ant (cyan)' },
-    { key: 'glenoid_posterior', color: 0xff4488, label: 'Post (pink)' },
-    { key: 'glenoid_superior',  color: 0x44ff88, label: 'Sup (green)' },
-    { key: 'glenoid_inferior',  color: 0xcc44ff, label: 'Inf (purple)' },
-  ];
-  ov.landmarks = [];
-  for (const p of points) {
-    const pos = lm[p.key]?.xyz_mm;
-    if (!pos) { console.warn('[MPR-overlay] landmark missing:', p.key); continue; }
-    const nv = pipelineToNiiVueMM(pos);
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(2.5, 16, 16),
-      new THREE.MeshBasicMaterial({ color: p.color })
-    );
-    mesh.position.set(nv[0], nv[1], nv[2]);
-    mesh.userData.isLandmark = true;
-    mesh.userData.key = p.key;
-    ov.scene.add(mesh);
-    ov.landmarks.push(mesh);
-    console.log(`[MPR-overlay] ${p.label}: pipeline mm=${pos.map(v=>v.toFixed(1)).join(',')} → NiiVue mm=${nv.map(v=>v.toFixed(1)).join(',')}`);
   }
 }
 
