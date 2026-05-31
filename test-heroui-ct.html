@@ -3865,6 +3865,11 @@ async function initMPR() {
 MPR.activeTool = 'scroll';
 function setupMPRToolbar() { /* intentionally empty — no interactive tools */ }
 
+// Phase 4C — Render the true cross-section (plane × mesh) instead of the full
+// projected silhouette (EdgesGeometry). Set to false in DevTools to compare
+// against the old full-silhouette behaviour.
+MPR.useCrossSection = true;
+
 function updateMPRInfo() {
   const nv = MPR.nv;
   if (!nv || !nv.volumes[0]) return;
@@ -3916,8 +3921,16 @@ function initMPROverlay() {
       coronal:  new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
       sagittal: new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
     },
-    implantLines: null,   // current LineSegments for the implant contour
-    sceneToNiiVue: null,  // 4x4 matrix scene → NiiVue mm
+    // Phase 4 fallback (full silhouette via EdgesGeometry)
+    implantLines: null,
+    // Phase 4C — true cross-section per slice (plane × mesh)
+    crossLines: null,             // { axial, coronal, sagittal } LineSegments
+    implantTrisLocal: null,       // Float32Array, 9 floats per triangle (mesh local)
+    implantNTris: 0,
+    crossOut: null,               // scratch Float32Array, 6 floats per segment
+    leafMesh: null,               // the actual Mesh inside implantMesh (for matrixWorld)
+    // Shared
+    sceneToNiiVue: null,
     volCenter: [volCenter[0], volCenter[1], volCenter[2]],
   };
 
@@ -3938,37 +3951,242 @@ function initMPROverlay() {
   }
 }
 
-/* Build / refresh the implant contour (EdgesGeometry wireframe) inside
-   the overlay scene. Called whenever the implant model or its pose changes. */
+/* ── Phase 4C helpers ──────────────────────────────────────────────────── */
+
+/* Extract every triangle of the implant's leaf mesh as raw vertex floats
+   (9 floats per triangle) in MESH LOCAL space. The result does NOT include
+   mesh.matrixWorld — that's applied later via LineSegments.matrix. This means
+   the cache stays valid across pose changes (retroversion / inclination /
+   depth) — only the matrix updates.
+   Handles both indexed and non-indexed BufferGeometry. */
+function extractImplantTrianglesLocal() {
+  let leafMesh = null;
+  implantMesh.traverse(c => { if (!leafMesh && c.isMesh && c.geometry) leafMesh = c; });
+  if (!leafMesh) return null;
+  const geom = leafMesh.geometry;
+  const posAttr = geom.attributes.position;
+  if (!posAttr) return null;
+  const pos = posAttr.array;
+  const idx = geom.index;
+  const N = idx ? (idx.count / 3) | 0 : (posAttr.count / 3) | 0;
+  const tris = new Float32Array(N * 9);
+  if (idx) {
+    const ia = idx.array;
+    for (let i = 0; i < N; i++) {
+      const a = ia[i*3] * 3, b = ia[i*3+1] * 3, c = ia[i*3+2] * 3;
+      const o = i * 9;
+      tris[o]   = pos[a];   tris[o+1] = pos[a+1]; tris[o+2] = pos[a+2];
+      tris[o+3] = pos[b];   tris[o+4] = pos[b+1]; tris[o+5] = pos[b+2];
+      tris[o+6] = pos[c];   tris[o+7] = pos[c+1]; tris[o+8] = pos[c+2];
+    }
+  } else {
+    // STL/OBJ without index: positions are already laid out as N*3 verts
+    tris.set(pos.subarray(0, N * 9));
+  }
+  return { leafMesh, tris, N };
+}
+
+/* Intersect a single triangle with a plane (point p, normal n), both in the
+   same coordinate space. Writes 0 or 6 floats (one line segment) to `out`
+   starting at `oIdx`. Returns number of floats written (0 or 6).
+   Edge cases handled:
+   - Triangle entirely on one side: skip
+   - Coplanar triangle: skip (drawn by adjacent triangles' edges)
+   - One vertex exactly on plane: emit (vertex, edge-cross-point) IF the other
+     two vertices straddle the plane; otherwise the plane just grazes a vertex
+     — skip. */
+const _CROSS_EPS = 1e-9;
+function intersectTriPlane(
+  v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z,
+  px, py, pz, nx, ny, nz,
+  out, oIdx
+) {
+  const d0 = (v0x - px) * nx + (v0y - py) * ny + (v0z - pz) * nz;
+  const d1 = (v1x - px) * nx + (v1y - py) * ny + (v1z - pz) * nz;
+  const d2 = (v2x - px) * nx + (v2y - py) * ny + (v2z - pz) * nz;
+  const s0 = Math.abs(d0) < _CROSS_EPS ? 0 : (d0 > 0 ? 1 : -1);
+  const s1 = Math.abs(d1) < _CROSS_EPS ? 0 : (d1 > 0 ? 1 : -1);
+  const s2 = Math.abs(d2) < _CROSS_EPS ? 0 : (d2 > 0 ? 1 : -1);
+
+  // Reject: all strictly same side, or coplanar
+  if (s0 !== 0 && s0 === s1 && s1 === s2) return 0;
+  if (s0 === 0 && s1 === 0 && s2 === 0) return 0;
+
+  const zeros = (s0 === 0 ? 1 : 0) + (s1 === 0 ? 1 : 0) + (s2 === 0 ? 1 : 0);
+
+  // Case: exactly TWO vertices on the plane → that triangle edge IS the
+  // intersection. Emit it directly.
+  if (zeros === 2) {
+    let ax, ay, az, bx, by, bz;
+    if (s0 === 0 && s1 === 0)      { ax = v0x; ay = v0y; az = v0z; bx = v1x; by = v1y; bz = v1z; }
+    else if (s1 === 0 && s2 === 0) { ax = v1x; ay = v1y; az = v1z; bx = v2x; by = v2y; bz = v2z; }
+    else                           { ax = v2x; ay = v2y; az = v2z; bx = v0x; by = v0y; bz = v0z; }
+    out[oIdx]   = ax; out[oIdx+1] = ay; out[oIdx+2] = az;
+    out[oIdx+3] = bx; out[oIdx+4] = by; out[oIdx+5] = bz;
+    return 6;
+  }
+
+  // Case: ONE vertex on plane. Plane cuts through it AND through the opposite
+  // edge IFF the other two vertices have opposite signs. Otherwise the plane
+  // is tangent at the vertex — skip.
+  if (zeros === 1) {
+    let onX, onY, onZ, ax, ay, az, bx, by, bz, dA, dB;
+    if (s0 === 0)      { onX = v0x; onY = v0y; onZ = v0z; ax = v1x; ay = v1y; az = v1z; bx = v2x; by = v2y; bz = v2z; dA = d1; dB = d2; if (s1 === s2) return 0; }
+    else if (s1 === 0) { onX = v1x; onY = v1y; onZ = v1z; ax = v0x; ay = v0y; az = v0z; bx = v2x; by = v2y; bz = v2z; dA = d0; dB = d2; if (s0 === s2) return 0; }
+    else               { onX = v2x; onY = v2y; onZ = v2z; ax = v0x; ay = v0y; az = v0z; bx = v1x; by = v1y; bz = v1z; dA = d0; dB = d1; if (s0 === s1) return 0; }
+    const t = dA / (dA - dB);
+    out[oIdx]   = onX; out[oIdx+1] = onY; out[oIdx+2] = onZ;
+    out[oIdx+3] = ax + t * (bx - ax);
+    out[oIdx+4] = ay + t * (by - ay);
+    out[oIdx+5] = az + t * (bz - az);
+    return 6;
+  }
+
+  // Case: ZERO vertices on plane, signs not all equal → exactly 2 edges cross.
+  let xa = 0, ya = 0, za = 0, xb = 0, yb = 0, zb = 0, count = 0;
+  if (s0 !== s1) {
+    const t = d0 / (d0 - d1);
+    xa = v0x + t * (v1x - v0x);
+    ya = v0y + t * (v1y - v0y);
+    za = v0z + t * (v1z - v0z);
+    count = 1;
+  }
+  if (s1 !== s2) {
+    const t = d1 / (d1 - d2);
+    if (count === 0) { xa = v1x + t * (v2x - v1x); ya = v1y + t * (v2y - v1y); za = v1z + t * (v2z - v1z); count = 1; }
+    else             { xb = v1x + t * (v2x - v1x); yb = v1y + t * (v2y - v1y); zb = v1z + t * (v2z - v1z); count = 2; }
+  }
+  if (count < 2 && s2 !== s0) {
+    const t = d2 / (d2 - d0);
+    if (count === 0) { xa = v2x + t * (v0x - v2x); ya = v2y + t * (v0y - v2y); za = v2z + t * (v0z - v2z); count = 1; }
+    else             { xb = v2x + t * (v0x - v2x); yb = v2y + t * (v0y - v2y); zb = v2z + t * (v0z - v2z); count = 2; }
+  }
+  if (count !== 2) return 0;
+  out[oIdx]   = xa; out[oIdx+1] = ya; out[oIdx+2] = za;
+  out[oIdx+3] = xb; out[oIdx+4] = yb; out[oIdx+5] = zb;
+  return 6;
+}
+
+/* Build / refresh the implant contour on the overlay scene. Called whenever
+   the implant model is loaded or replaced. Pose changes (retroversion etc.)
+   do NOT call this — they only need a redraw because the triangles are cached
+   in mesh-local space and the LineSegments.matrix updates each draw. */
 function updateImplantOverlayMesh() {
   const ov = MPR.overlay;
   if (!ov || !ov.sceneToNiiVue) return;
-  // Remove previous contour
+
+  // Dispose any previous artefacts (both modes)
   if (ov.implantLines) {
     ov.scene.remove(ov.implantLines);
     ov.implantLines.geometry.dispose();
     ov.implantLines.material.dispose();
     ov.implantLines = null;
   }
-  if (!implantMesh) return;
-  // Find the actual Mesh geometry inside the implant Group
-  let geom = null;
-  implantMesh.traverse(c => { if (!geom && c.isMesh && c.geometry) geom = c.geometry; });
-  if (!geom) return;
+  if (ov.crossLines) {
+    for (const k of ['axial', 'coronal', 'sagittal']) {
+      const l = ov.crossLines[k];
+      if (!l) continue;
+      ov.scene.remove(l);
+      l.geometry.dispose();
+      l.material.dispose();
+    }
+    ov.crossLines = null;
+  }
+  ov.implantTrisLocal = null;
+  ov.implantNTris = 0;
+  ov.crossOut = null;
+  ov.leafMesh = null;
 
-  // EdgesGeometry: only sharp edges (angle threshold 20°) — clean contour look
-  const edges = new THREE.EdgesGeometry(geom, 20);
-  const mat = new THREE.LineBasicMaterial({
-    color: 0xff7a00, transparent: true, opacity: 0.95,
-  });
-  const lines = new THREE.LineSegments(edges, mat);
-  lines.matrixAutoUpdate = false;
-  // Final transform: sceneToNiiVue × implant.matrixWorld
-  implantMesh.updateMatrixWorld(true);
-  lines.matrix.multiplyMatrices(ov.sceneToNiiVue, implantMesh.matrixWorld);
-  lines.matrixWorldNeedsUpdate = true;
-  ov.scene.add(lines);
-  ov.implantLines = lines;
+  if (!implantMesh) return;
+
+  if (!MPR.useCrossSection) {
+    // ── Fallback path: original Phase 4 (full silhouette via EdgesGeometry) ──
+    let geom = null;
+    implantMesh.traverse(c => { if (!geom && c.isMesh && c.geometry) geom = c.geometry; });
+    if (!geom) return;
+    const edges = new THREE.EdgesGeometry(geom, 20);
+    const mat = new THREE.LineBasicMaterial({ color: 0xff7a00, transparent: true, opacity: 0.95 });
+    const lines = new THREE.LineSegments(edges, mat);
+    lines.matrixAutoUpdate = false;
+    implantMesh.updateMatrixWorld(true);
+    lines.matrix.multiplyMatrices(ov.sceneToNiiVue, implantMesh.matrixWorld);
+    lines.matrixWorldNeedsUpdate = true;
+    ov.scene.add(lines);
+    ov.implantLines = lines;
+    return;
+  }
+
+  // ── Phase 4C path: cache triangles + create the 3 cross-section LineSegments ──
+  const ext = extractImplantTrianglesLocal();
+  if (!ext) return;
+  ov.leafMesh = ext.leafMesh;
+  ov.implantTrisLocal = ext.tris;
+  ov.implantNTris = ext.N;
+  // Output buffer: at most one segment (2 verts = 6 floats) per triangle
+  ov.crossOut = new Float32Array(ext.N * 6);
+
+  // Three LineSegments, one per slice axis. Each gets its own preallocated
+  // BufferGeometry sized to the worst case (N triangles → 2N verts).
+  const colors = { axial: 0xff7a00, coronal: 0xff7a00, sagittal: 0xff7a00 };
+  ov.crossLines = {};
+  for (const axis of ['axial', 'coronal', 'sagittal']) {
+    const positions = new Float32Array(ext.N * 6); // owned by the geometry
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geom.setDrawRange(0, 0); // empty until first computeCrossSection() call
+    const mat = new THREE.LineBasicMaterial({
+      color: colors[axis], transparent: true, opacity: 0.95,
+    });
+    const lines = new THREE.LineSegments(geom, mat);
+    lines.matrixAutoUpdate = false;
+    lines.frustumCulled = false; // cross-section bounds change every draw
+    lines.userData.axis = axis;
+    ov.scene.add(lines);
+    ov.crossLines[axis] = lines;
+  }
+}
+
+/* Compute the implant's cross-section against a plane in NiiVue (world) space
+   and upload the resulting line segments into the given LineSegments. The
+   triangles are cached in mesh-local space; we transform the plane into
+   mesh-local space (inverse of LineSegments.matrix), do all intersections
+   there, then let the matrix transform the output back to NiiVue space. */
+const _v3 = new THREE.Vector3();
+const _v3b = new THREE.Vector3();
+const _mInv = new THREE.Matrix4();
+function computeCrossSectionInto(lines, M, p_world, n_world) {
+  const ov = MPR.overlay;
+  const tris = ov.implantTrisLocal;
+  const N = ov.implantNTris;
+  const out = ov.crossOut;
+  if (!tris || !N) { lines.geometry.setDrawRange(0, 0); return; }
+
+  // Plane → mesh-local
+  _mInv.copy(M).invert();
+  _v3.set(p_world[0], p_world[1], p_world[2]).applyMatrix4(_mInv);
+  _v3b.set(n_world[0], n_world[1], n_world[2]).transformDirection(_mInv);
+  const px = _v3.x,  py = _v3.y,  pz = _v3.z;
+  const nx = _v3b.x, ny = _v3b.y, nz = _v3b.z;
+
+  let outIdx = 0;
+  for (let i = 0; i < N; i++) {
+    const o = i * 9;
+    outIdx += intersectTriPlane(
+      tris[o],   tris[o+1], tris[o+2],
+      tris[o+3], tris[o+4], tris[o+5],
+      tris[o+6], tris[o+7], tris[o+8],
+      px, py, pz, nx, ny, nz,
+      out, outIdx
+    );
+  }
+
+  // Upload to GPU. We reuse the attribute's backing array.
+  const posAttr = lines.geometry.attributes.position;
+  const arr = posAttr.array;
+  // Copy the populated prefix of `out` into the attribute's array
+  arr.set(out.subarray(0, outIdx));
+  posAttr.needsUpdate = true;
+  lines.geometry.setDrawRange(0, outIdx / 3); // floats / 3 = vertex count
 }
 
 function drawMPROverlay() {
@@ -3990,6 +4208,33 @@ function drawMPROverlay() {
   const [vcx, vcy, vcz] = ov.volCenter; // volume centre — frame stays put
   const canvasH = ovCanvas.height;
 
+  // ── Phase 4C: refresh cross-sections (plane × mesh) for each axis ──
+  // Triangles are cached in mesh-local space; LineSegments.matrix transforms
+  // them back to NiiVue space. So we update both the matrix (pose changed?)
+  // and the geometry (slice depth changed?).
+  let mesh2niivue = null; // shared M = sceneToNiiVue × leafMesh.matrixWorld
+  if (MPR.useCrossSection && ov.crossLines && ov.leafMesh && implantMesh) {
+    implantMesh.updateMatrixWorld(true);
+    mesh2niivue = new THREE.Matrix4().multiplyMatrices(ov.sceneToNiiVue, ov.leafMesh.matrixWorld);
+
+    for (const axis of ['axial', 'coronal', 'sagittal']) {
+      const line = ov.crossLines[axis];
+      line.matrix.copy(mesh2niivue);
+      line.matrixWorldNeedsUpdate = true;
+      // Plane (point on plane, plane normal) in NiiVue / world space
+      let p, n;
+      if (axis === 'axial')        { p = [0, 0, cz]; n = [0, 0, 1]; }
+      else if (axis === 'coronal') { p = [0, cy, 0]; n = [0, 1, 0]; }
+      else                          { p = [cx, 0, 0]; n = [1, 0, 0]; }
+      computeCrossSectionInto(line, mesh2niivue, p, n);
+    }
+  } else if (!MPR.useCrossSection && ov.implantLines && implantMesh) {
+    // Fallback: keep the EdgesGeometry transform in sync with the implant pose
+    implantMesh.updateMatrixWorld(true);
+    ov.implantLines.matrix.multiplyMatrices(ov.sceneToNiiVue, implantMesh.matrixWorld);
+    ov.implantLines.matrixWorldNeedsUpdate = true;
+  }
+
   // Clear entire overlay first
   ov.renderer.setViewport(0, 0, ovCanvas.width, canvasH);
   ov.renderer.setScissor(0, 0, ovCanvas.width, canvasH);
@@ -4001,7 +4246,7 @@ function drawMPROverlay() {
     // NiiVue uses top-left origin; WebGL viewport uses bottom-left
     const vp_y = canvasH - py - ph;
 
-    let cam;
+    let cam, activeAxis;
     if (s.axCorSag === 0) {
       // AXIAL: looking down +Z onto X-Y plane.
       // Camera is at the VOLUME centre in X-Y; the slice depth (Z) follows the crosshair.
@@ -4009,18 +4254,21 @@ function drawMPROverlay() {
       cam.position.set(vcx, vcy, cz + 500);
       cam.up.set(0, 1, 0);
       cam.lookAt(vcx, vcy, cz);
+      activeAxis = 'axial';
     } else if (s.axCorSag === 1) {
       // CORONAL: looking along +Y onto X-Z plane
       cam = ov.cameras.coronal;
       cam.position.set(vcx, cy - 500, vcz);
       cam.up.set(0, 0, 1);
       cam.lookAt(vcx, cy, vcz);
+      activeAxis = 'coronal';
     } else {
       // SAGITTAL: looking along +X onto Y-Z plane
       cam = ov.cameras.sagittal;
       cam.position.set(cx + 500, vcy, vcz);
       cam.up.set(0, 0, 1);
       cam.lookAt(cx, vcy, vcz);
+      activeAxis = 'sagittal';
     }
     cam.left   = -fovX / 2;
     cam.right  =  fovX / 2;
@@ -4028,9 +4276,27 @@ function drawMPROverlay() {
     cam.bottom = -fovY / 2;
     cam.updateProjectionMatrix();
 
+    // Phase 4C: render ONLY the matching axis's cross-section in this viewport.
+    // The other two axes' lines exist in the same scene but are hidden so
+    // their projections (edge-on curves) don't clutter the view.
+    if (MPR.useCrossSection && ov.crossLines) {
+      ov.crossLines.axial.visible    = (activeAxis === 'axial');
+      ov.crossLines.coronal.visible  = (activeAxis === 'coronal');
+      ov.crossLines.sagittal.visible = (activeAxis === 'sagittal');
+    }
+
     ov.renderer.setViewport(px, vp_y, pw, ph);
     ov.renderer.setScissor(px, vp_y, pw, ph);
     ov.renderer.render(ov.scene, cam);
+  }
+
+  // Leave them all visible after the last viewport so user inspection in the
+  // Three.js scene panel (if any) shows everything; per-viewport toggle still
+  // applied on the next draw.
+  if (MPR.useCrossSection && ov.crossLines) {
+    ov.crossLines.axial.visible = true;
+    ov.crossLines.coronal.visible = true;
+    ov.crossLines.sagittal.visible = true;
   }
 }
 

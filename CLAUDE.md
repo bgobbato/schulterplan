@@ -13,21 +13,62 @@ Implantcast Agilon. Single HTML file + Three.js via importmap. Sem build step.
 ## Planos abertos
 - **`MPR_PLAN.md`** v2 — Plano detalhado da implementação MPR (CT). Status: **MVP 1 OK** (Phase 0-2 + coord fix). Branch ativo: `mpr-dev`. Arquivo: `test-heroui-ct.html`.
 - **`MPR_HAR_ANALYSIS_REPORT.md`** — Análise CustomedAI (referência arquitetural, Phase 7 Option D).
+- **`PSI_IMPLEMENTATION.md`** — Implementação PSI (Phase A+B+C combinadas). **✅ FUNCIONA** com manifold-3d + MeshLab pre-process.
 
-## MPR — estado atual (31/maio/2026 — MVP 2 LIMPO)
-Branch `mpr-dev`. `test-heroui.html` original **intacto**. Funciona:
+## PSI — estado atual (31/maio/2026 — PIPELINE COMPLETO ✅)
+Arquivo: `test-psi.html` (~1700 linhas). Engine padrão: **manifold-3d** (WASM, manifold ✓).
+- 3 spheres draggable na rim, snap automático à superfície da escapula
+- Auto-place inicial a 120° no glenoid plane, raio 14mm
+- 2 engines: manifold-3d (recomendado) e three-bvh-csg (fallback com repair externo)
+- Persistência em `schulterplan_psi_${caseId}`
+- STL download direto após geração
+
+**Receita CSG (manifold-3d):**
+1. Pré-processar `data/scapula.obj` no MeshLab → `data/scapula_manifold.obj` (uma vez por caso)
+2. Union de 10 primitives (1 central + 3 feet + 3 legs + 3 fillets) via `batchBoolean('add')`
+3. K-wire subtract PRIMEIRO (16 segs, Ø2.5)
+4. Bone subtract LAST (offset=0, MeshLab-cleaned)
+5. Resultado: ~13k tris, manifold ✓, ~3-7s
+
+**Bugs descobertos e fixados:**
+- `Manifold.rotate([euler])` não bate com Three.js Euler XYZ → cilindros tortos
+- `Manifold.transform(mat3x4)` v2.5.1 ignora translation → primitivos no origem
+- **FIX**: bake transform na geometria THREE.js antes de converter pra Manifold
+- `mergeVertices` não solda quando normals divergem → rim aberto. **FIX**: strip non-position attrs
+- BONE_OFFSET=0.5 cria self-intersections em concavidades. **FIX**: offset=0
+- K-wire 96-seg gera slivers contra bone-conformal surface. **FIX**: 16-seg + ordem invertida (K-wire first)
+- Lazy eval: `subtract()` OK não significa resultado válido. SEMPRE testar `getMesh()` na sequência
+
+Ver `PSI_IMPLEMENTATION.md` pra detalhes técnicos completos e `PSI_NOTES.md` pra ideias paradas.
+Ver `MESHLAB_PSI_WORKFLOW.md` pro passo-a-passo do pré-processamento.
+
+## MPR — estado atual (31/maio/2026 — Phase 4C É O MVP)
+Branch `mpr-dev`. `test-heroui.html` original (sem MPR) **intacto**. O MPR vive
+em `test-heroui-ct.html` que agora é a **versão cross-section** (Phase 4C
+promovida ao padrão — antiga silhueta cheia disponível via `MPR.useCrossSection = false`).
+
+Funciona:
 - Botão `CT` na topbar abre coluna 400px com NiiVue 0.69 + NIfTI 64MB (gitignored em `data/`)
 - Layout `MULTIPLANAR_TYPE.COLUMN` (axial/coronal/sagittal empilhados)
 - Scroll wheel por linha (top=Z axial, mid=Y coronal, bot=X sagittal)
 - Crosshair verde em `glenoid_center` exato
 - **Toolbar removida** — MPR é view-only (sem W/L, sem pan, sem zoom). Wheel scrolla, pronto.
 - Label de coord pipeline + label W/L (read-only) embaixo
-- **Overlay do implante (Phase 4 Option D simplificada — silhueta cheia)**:
+- **Overlay do implante (Phase 4C — cross-section real)**:
   - Canvas `#ct-overlay` transparente sobre o NiiVue
   - Three.js renderer próprio + 3 ortho cameras (uma por slice)
-  - `EdgesGeometry` (laranja) do implante projetada em cada quadrante
-  - Câmera ANCORADA no centro do volume (não no crosshair — NiiVue não pan)
-  - Monkey-patched `updateImplantPose()` + `setImplant()` para auto-refresh
+  - 3 `LineSegments` (uma por eixo) com `BufferGeometry` pré-alocada
+  - Triângulos do implante cacheados em mesh-local (Float32Array 9 floats/tri)
+  - Por draw: plano em NiiVue → mesh-local (via inverso de matrix), itera
+    triângulos, `intersectTriPlane()` gera 0 ou 2 pontos por tri → upload via
+    `setDrawRange` (zero GC pressure)
+  - Por viewport: só `.visible` a LineSegments do eixo corrente
+  - Pose update (retroversion/inclination/depth) → só recalcula matrix, cache
+    de triângulos sobrevive
+  - Flag `MPR.useCrossSection` (default `true`) — `false` no console retorna
+    ao comportamento Phase 4 (full silhouette via EdgesGeometry) para A/B
+  - Edge cases tratados em `intersectTriPlane()`: coplanar, vértice no plano,
+    todos no mesmo lado
 - **Landmarks removidos** — coords validados, esferas coloridas deletadas do código
 
 **Decisões de design tomadas (31/maio/2026)**:
@@ -35,8 +76,8 @@ Branch `mpr-dev`. `test-heroui.html` original **intacto**. Funciona:
   para tracking de viewport center + drag handler customizado) quebrou alinhamento do
   implante. Revertido. MPR fica fixo, sem interação a não ser scroll de slice.
 - **W/L não será ajustável**. É só visualização — usar defaults do NiiVue.
-- **Próxima feature (Phase 4C) será em arquivo separado** (`test-heroui-ct-v2.html` ou
-  similar) para não interferir no MVP 2 estável atual.
+- **Phase 4C é o default** desde 31/maio/2026 — silhueta cheia disponível só
+  via flag console pra debug.
 
 **Conversão de coordenadas pipeline → NiiVue (CRÍTICO)**:
 Pipeline xyz_mm está em **LPS** (DICOM convention). NiiVue lê NIfTI como **RAS**.
@@ -49,29 +90,6 @@ Pipeline xyz_mm está em **LPS** (DICOM convention). NiiVue lê NIfTI como **RAS
   [ 0  0  0     1     ]
   ```
 - Validado empiricamente plotando trigonum + 4 rim points
-
-**Limitação removida** (por decisão): zoom/pan do NiiVue desabilitados — não há
-mais "perda de alinhamento" porque o usuário não pode mais zoomar/pannar.
-
-**Phase 4C ✅ implementada e validada** (31/maio/2026) em arquivo separado
-`test-heroui-ct-crosssection.html` — o MVP 2 (`test-heroui-ct.html`) fica intacto
-como fallback estável.
-
-Mudanças do 4C (em relação ao 4 simplificado):
-- Triângulos do implante extraídos uma vez (mesh-local) → `Float32Array` 9 floats/tri
-- 3 `LineSegments` (axial/coronal/sagittal), cada um com BufferGeometry pré-alocada
-- `matrix = sceneToNiiVue × leafMesh.matrixWorld` (pose update → só atualiza matrix)
-- Por draw: plano em NiiVue space → inverso da matrix → plano em mesh-local →
-  itera triângulos → 0 ou 2 pontos por triângulo via `intersectTriPlane()`
-- Pontos escritos em buffer scratch → uploaded via `setDrawRange` (sem alocação)
-- Por viewport: só a LineSegments do eixo corrente fica `.visible = true`
-- Edge cases: triângulo coplanar, vértice no plano (zero count), todos do mesmo
-  lado — todos tratados explicitamente em `intersectTriPlane()`
-- Flag `MPR.useCrossSection` (default true) — `false` no console retorna ao
-  comportamento Phase 4 (full silhouette via EdgesGeometry) para A/B
-
-Validado com retroversão / inclinação / depth — contorno se atualiza em tempo
-real porque o triangle cache permanece e só a matrix recomputa.
 
 **Lições aprendidas**:
 - NiiVue API `moveCrosshairInVox(dx, dy, dz)` é scalars, NÃO array
