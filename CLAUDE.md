@@ -53,10 +53,25 @@ Pipeline xyz_mm está em **LPS** (DICOM convention). NiiVue lê NIfTI como **RAS
 **Limitação removida** (por decisão): zoom/pan do NiiVue desabilitados — não há
 mais "perda de alinhamento" porque o usuário não pode mais zoomar/pannar.
 
-**Próxima fase**: Phase 4C — **clipping plane real** (interseção plano × malha) para
-mostrar só o cross-section do implante naquele slice, em vez da silhueta cheia.
-Algoritmo escolhido: intersecção plano-triângulo em JS (~10k tris × 3 planos ≈ <5ms).
-Será implementada em **arquivo separado** para não quebrar o MVP 2 atual.
+**Phase 4C ✅ implementada e validada** (31/maio/2026) em arquivo separado
+`test-heroui-ct-crosssection.html` — o MVP 2 (`test-heroui-ct.html`) fica intacto
+como fallback estável.
+
+Mudanças do 4C (em relação ao 4 simplificado):
+- Triângulos do implante extraídos uma vez (mesh-local) → `Float32Array` 9 floats/tri
+- 3 `LineSegments` (axial/coronal/sagittal), cada um com BufferGeometry pré-alocada
+- `matrix = sceneToNiiVue × leafMesh.matrixWorld` (pose update → só atualiza matrix)
+- Por draw: plano em NiiVue space → inverso da matrix → plano em mesh-local →
+  itera triângulos → 0 ou 2 pontos por triângulo via `intersectTriPlane()`
+- Pontos escritos em buffer scratch → uploaded via `setDrawRange` (sem alocação)
+- Por viewport: só a LineSegments do eixo corrente fica `.visible = true`
+- Edge cases: triângulo coplanar, vértice no plano (zero count), todos do mesmo
+  lado — todos tratados explicitamente em `intersectTriPlane()`
+- Flag `MPR.useCrossSection` (default true) — `false` no console retorna ao
+  comportamento Phase 4 (full silhouette via EdgesGeometry) para A/B
+
+Validado com retroversão / inclinação / depth — contorno se atualiza em tempo
+real porque o triangle cache permanece e só a matrix recomputa.
 
 **Lições aprendidas**:
 - NiiVue API `moveCrosshairInVox(dx, dy, dz)` é scalars, NÃO array
