@@ -10,18 +10,26 @@
 Aplicacao web 3D para planejamento de protese de ombro (glenoide) com implantes
 Implantcast Agilon. Single HTML file + Three.js via importmap. Sem build step.
 
+## Tracker oficial: Linear
+**Projeto Linear**: [PlanningApp Implantcast FRONTEND](https://linear.app/bgobbato/project/planningapp-implantcast-frontend-31a8b532c894/overview)
+- Team Bgobbato (BGO)
+- Política dual-source: toda issue Linear espelha em CLAUDE.md ou doc específico (mesma política do PSI)
+- 6 épicos ativos: MPR Phase 6 (BGO-68), Import de casos (BGO-69), Back surfaces (BGO-70), Dashboard pipeline (BGO-71), Cleanup (BGO-72), Docs (BGO-73)
+- Labels específicas: MPR, PSI, Pipeline, Dashboard, Humerus, 3D-Viewer, Polish, + as gerais (Feature, Bug, etc)
+
 ## Planos abertos
 - **`MPR_PLAN.md`** v2 — Plano detalhado da implementação MPR (CT). Status: **MVP 1 OK** (Phase 0-2 + coord fix). Branch ativo: `mpr-dev`. Arquivo: `test-heroui-ct.html`.
 - **`MPR_HAR_ANALYSIS_REPORT.md`** — Análise CustomedAI (referência arquitetural, Phase 7 Option D).
 - **`PSI_IMPLEMENTATION.md`** — Implementação PSI (Phase A+B+C combinadas). **✅ FUNCIONA** com manifold-3d + MeshLab pre-process.
 
-## PSI — estado atual (31/maio/2026 — PIPELINE COMPLETO ✅)
-Arquivo: `test-psi.html` (~1700 linhas). Engine padrão: **manifold-3d** (WASM, manifold ✓).
+## PSI — estado atual (31/maio/2026 — PIPELINE COMPLETO ✅ + Patient ID)
+Arquivo: `test-psi.html` (~1940 linhas). Engine padrão: **manifold-3d** (WASM, manifold ✓).
 - 3 spheres draggable na rim, snap automático à superfície da escapula
 - Auto-place inicial a 120° no glenoid plane, raio 14mm
 - 2 engines: manifold-3d (recomendado) e three-bvh-csg (fallback com repair externo)
-- Persistência em `schulterplan_psi_${caseId}`
+- Persistência em `schulterplan_psi_${caseId}` (v2 schema: legs + patientId)
 - STL download direto após geração
+- **Patient ID embossed** (max 10 chars) na parte superior do cilindro central, ao longo de K, facing lateral. Helvetiker font, char height 1.8mm, relevo 0.8mm.
 
 **Receita CSG (manifold-3d):**
 1. Pré-processar `data/scapula.obj` no MeshLab → `data/scapula_manifold.obj` (uma vez por caso)
@@ -39,8 +47,19 @@ Arquivo: `test-psi.html` (~1700 linhas). Engine padrão: **manifold-3d** (WASM, 
 - K-wire 96-seg gera slivers contra bone-conformal surface. **FIX**: 16-seg + ordem invertida (K-wire first)
 - Lazy eval: `subtract()` OK não significa resultado válido. SEMPRE testar `getMesh()` na sequência
 
-Ver `PSI_IMPLEMENTATION.md` pra detalhes técnicos completos e `PSI_NOTES.md` pra ideias paradas.
-Ver `MESHLAB_PSI_WORKFLOW.md` pro passo-a-passo do pré-processamento.
+**Docs PSI (todos no root do projeto):**
+- `PSI_IMPLEMENTATION.md` — referência técnica completa (arquitetura, bugs, lições, glossário, changelog)
+- `PSI_USER_GUIDE.md` — guia cirúrgico passo-a-passo, linguagem clínica
+- `PSI_CODE_MAP.md` — mapa de navegação do test-psi.html (funções, linhas, constants)
+- `PSI_TROUBLESHOOTING.md` — FAQ sintoma→fix (17+ casos catalogados)
+- `PSI_NOTES.md` — ideias paradas (A-I: subtract dome, BVH manifoldize, backend, A/P labels, sleeve, etc)
+- `MESHLAB_PSI_WORKFLOW.md` — passo-a-passo do MeshLab pre-process
+- `PSI_HAR_ANALYSIS_REPORT.md` — engenharia reversa do CustomedAI
+- `PSI_LINEAR_INDEX.md` — mapeamento issues Linear ↔ docs (cross-reference)
+
+**Tracker oficial do PSI: [Linear project PSI](https://linear.app/bgobbato/project/psi-e52854946bb5)**
+Team Bgobbato (BGO). 20 issues criadas (BGO-48 a BGO-67). Política dual-source:
+toda ideia/bug nova vai em (a) `PSI_NOTES.md` ou `PSI_TROUBLESHOOTING.md` E (b) issue Linear.
 
 ## MPR — estado atual (31/maio/2026 — Phase 4C É O MVP)
 Branch `mpr-dev`. `test-heroui.html` original (sem MPR) **intacto**. O MPR vive
