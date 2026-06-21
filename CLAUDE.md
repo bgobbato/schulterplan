@@ -22,14 +22,22 @@ Implantcast Agilon. Single HTML file + Three.js via importmap. Sem build step.
 - **`MPR_HAR_ANALYSIS_REPORT.md`** — Análise CustomedAI (referência arquitetural, Phase 7 Option D).
 - **`PSI_IMPLEMENTATION.md`** — Implementação PSI (Phase A+B+C combinadas). **✅ FUNCIONA** com manifold-3d + MeshLab pre-process.
 
-## PSI — estado atual (31/maio/2026 — PIPELINE COMPLETO ✅ + Patient ID)
-Arquivo: `test-psi.html` (~1940 linhas). Engine padrão: **manifold-3d** (WASM, manifold ✓).
+## PSI — estado atual (21/junho/2026 — INTEGRADO com test-heroui ✅)
+Arquivo: `test-psi.html` (~2000 linhas). Engine padrão: **manifold-3d** (WASM, manifold ✓).
 - 3 spheres draggable na rim, snap automático à superfície da escapula
 - Auto-place inicial a 120° no glenoid plane, raio 14mm
 - 2 engines: manifold-3d (recomendado) e three-bvh-csg (fallback com repair externo)
 - Persistência em `schulterplan_psi_${caseId}` (v2 schema: legs + patientId)
 - STL download direto após geração
 - **Patient ID embossed** (max 10 chars) na parte superior do cilindro central, ao longo de K, facing lateral. Helvetiker font, char height 1.8mm, relevo 0.8mm.
+- **Integrado com test-heroui** [BGO-154]:
+  - Botão "Generate PSI" no topbar do test-heroui leva pro PSI com `?v=12&fromPlanner=1`
+  - PSI carrega caso ativo do `caseStore` (IndexedDB) — funciona com zip importado
+  - Lê `localStorage['schulterplan_implant_${caseId}']` e aplica `state.adjust` no K-axis:
+    - Rotação (retroversion/inclination) rotaciona `friedmanAxis`
+    - Translação (tx/ty/depth) gera `kwireOrigin` separado de `glenoidCenter`
+  - Sidebar K-wire info mostra retro/incl/tx/ty/depth quando há ajuste
+  - Botão "← Back to Planner" no header do PSI
 
 **Receita CSG (manifold-3d):**
 1. Pré-processar `data/scapula.obj` no MeshLab → `data/scapula_manifold.obj` (uma vez por caso)
