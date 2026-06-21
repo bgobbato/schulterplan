@@ -35,3 +35,8 @@ deploy/
 *.nii
 *.nii.gz
 *.tar.gz
+
+# Exception: demo CT shipped with the public deploy (Vercel) so the
+# default test-heroui-ct.html case is fully functional out of the box.
+# Real surgical cases come via zip import in-browser — never committed.
+!data/selected_series_0000.nii.gz
