@@ -725,6 +725,44 @@
 
 <script type="module">
 import * as THREE from 'three';
+import * as caseStore from './js/caseStore.js';
+
+// Loaded once at init; used by both init() and initOsteophyteComparison() so a
+// case imported via zip in the planner is reflected in every viewport here.
+let activeImportedCase = null;
+let _scapulaBlobUrl = null;
+let _humerusBlobUrl = null;
+
+// URL helpers: prefer the imported mesh (blob URL) over the static demo file.
+// Imported cases don't carry a "with-osteophyte" source OBJ — the planning
+// mesh stands in for both, which makes the osteophyte diff empty (no false
+// positives) on imported data.
+function getScapulaUrl(cb) {
+  if (activeImportedCase?.scapulaObj) {
+    if (!_scapulaBlobUrl) {
+      _scapulaBlobUrl = URL.createObjectURL(new Blob([activeImportedCase.scapulaObj], { type: 'text/plain' }));
+    }
+    return _scapulaBlobUrl;
+  }
+  return 'data/scapula.obj' + (cb || '');
+}
+function getHumerusUrl(cb) {
+  if (activeImportedCase?.humerusObj) {
+    if (!_humerusBlobUrl) {
+      _humerusBlobUrl = URL.createObjectURL(new Blob([activeImportedCase.humerusObj], { type: 'text/plain' }));
+    }
+    return _humerusBlobUrl;
+  }
+  return 'data/humerus.obj' + (cb || '');
+}
+function getScapulaSourceUrl(cb) {
+  if (activeImportedCase?.scapulaObj) return getScapulaUrl(cb);
+  return 'data/scapula_source.obj' + (cb || '');
+}
+function getHumerusSourceUrl(cb) {
+  if (activeImportedCase?.humerusObj) return getHumerusUrl(cb);
+  return 'data/humerus_source.obj' + (cb || '');
+}
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
@@ -1124,13 +1162,31 @@ function createAutoMeasure(scene, implantMatrix, glenoidRayMesh) {
 
 // ── MAIN: load data and build all viewports ──
 async function init() {
+  // 0. Try the imported case from IndexedDB first (set by zip import in the planner)
+  try { activeImportedCase = await caseStore.loadActiveCase(); }
+  catch (e) { console.warn('[Dashboard] caseStore failed:', e); }
+  console.log('[Dashboard] caseStore activeCase:',
+    activeImportedCase
+      ? { caseId: activeImportedCase.caseId,
+          hasPayload: !!activeImportedCase.payload,
+          hasScapulaObj: !!activeImportedCase.scapulaObj,
+          hasHumerusObj: !!activeImportedCase.humerusObj,
+          hasNiftiBuffer: !!activeImportedCase.niftiBuffer }
+      : 'none');
+
   // 1. Try the pipeline payload first (the case the user is actively planning)
   let usedPipeline = false;
   let savedImplantState = null;
   try {
-    const r = await fetch('data/planning_payload.json?v=' + Date.now());
-    if (r.ok) {
-      const payload = await r.json();
+    let payload = null;
+    if (activeImportedCase && activeImportedCase.payload) {
+      payload = activeImportedCase.payload;
+      console.log(`[Dashboard] Imported case from IndexedDB: ${payload.case?.case_id}`);
+    } else {
+      const r = await fetch('data/planning_payload.json?v=' + Date.now());
+      if (r.ok) payload = await r.json();
+    }
+    if (payload) {
       planning = planningFromPipelinePayload(payload);
       _payloadShared = payload;
       usedPipeline = true;
@@ -1199,8 +1255,8 @@ async function init() {
     document.getElementById('inf-presublux').textContent = fmt(planning.preOp.preOpSubluxation, '%');
   }
 
-  // Load scapula
-  const scapulaObj = await loadOBJ('data/scapula.obj');
+  // Load scapula (prefer imported case mesh over the demo file)
+  const scapulaObj = await loadOBJ(getScapulaUrl());
   const scapulaGeom = new THREE.BufferGeometry();
   const allPos = [];
   scapulaObj.traverse(c => {
@@ -1380,10 +1436,15 @@ function buildGeomFromPositions(positions) {
 
 async function initOsteophyteComparison() {
   let payload = null;
-  try {
-    const r = await fetch('data/planning_payload.json?v=' + Date.now());
-    if (r.ok) payload = await r.json();
-  } catch (e) { /* ignore */ }
+  // Prefer the imported case in IndexedDB (already loaded by init())
+  if (activeImportedCase && activeImportedCase.payload) {
+    payload = activeImportedCase.payload;
+  } else {
+    try {
+      const r = await fetch('data/planning_payload.json?v=' + Date.now());
+      if (r.ok) payload = await r.json();
+    } catch (e) { /* ignore */ }
+  }
 
   const cb = '?v=' + Date.now();
 
@@ -1397,8 +1458,8 @@ async function initOsteophyteComparison() {
   // ── SCAPULA — combined viewport with 3 modes (Original / Osteophytes / Measurements) ──
   try {
     const [scapSrc, scapPlan] = await Promise.all([
-      loadOBJ('data/scapula_source.obj' + cb),
-      loadOBJ('data/scapula.obj' + cb),
+      loadOBJ(getScapulaSourceUrl(cb)),
+      loadOBJ(getScapulaUrl(cb)),
     ]);
     const srcArr  = objToFlatGeometry(scapSrc).attributes.position.array;
     let planArr   = objToFlatGeometry(scapPlan).attributes.position.array;
@@ -1574,8 +1635,8 @@ async function initOsteophyteComparison() {
   // ── HUMERUS (single viewport with 3 mode toggles) ──
   try {
     const [humSrc, humPlan] = await Promise.all([
-      loadOBJ('data/humerus_source.obj' + cb),
-      loadOBJ('data/humerus.obj' + cb),
+      loadOBJ(getHumerusSourceUrl(cb)),
+      loadOBJ(getHumerusUrl(cb)),
     ]);
     const srcArr  = objToFlatGeometry(humSrc).attributes.position.array;
     const planArr = objToFlatGeometry(humPlan).attributes.position.array;

@@ -68,6 +68,40 @@ cross-section + zip import. (Antiga `test-heroui.html` sem MPR não existe mais 
 links de outras páginas continuam apontando pra ela e ganham os recursos do CT
 automaticamente.)
 
+## Persistência cross-page do caso importado (21/junho/2026)
+Módulo `js/caseStore.js` — IndexedDB wrapper. O zip importado sobrevive a:
+- Navegação entre páginas (test-heroui → humerus → dashboard → de volta)
+- Hard refresh (Cmd+Shift+R)
+- Fechar e abrir o browser
+
+### Como funciona
+- DB `schulterplan`, object store `cases`, keyed por `caseId`
+- Record: `{ caseId, payload, scapulaObj, humerusObj?, niftiBuffer?, fileName?, savedAt }`
+- localStorage `schulterplan_active_case` = caseId atualmente ativo (zero-cost hint)
+- API: `saveCase()`, `loadCase()`, `loadActiveCase()`, `setActiveCase()`, `clearActiveCase()`,
+  `getActiveCaseId()`, `deleteCase()`
+
+### Integração
+- **test-heroui.html**:
+  - `applyPipelineCase()` salva no IndexedDB + seta active
+  - Init prefere `loadActiveCase()` antes do `fetch('data/...')`
+  - Botão "Reset" (topbar) limpa active e recarrega
+- **humerus.html**:
+  - Init prefere `activeCase.humerusObj` (blob URL) antes do `data/humerus.obj`
+  - Cai pro demo se zip não tinha humerus
+- **surgery-dashboard.html**:
+  - Helpers `getScapulaUrl()`, `getHumerusUrl()`, `getScapulaSourceUrl()`, `getHumerusSourceUrl()`
+  - Source URLs caem no planning URL pra imported (sem osteo diff falso)
+
+### Bug crítico que precisou fix: TDZ no init
+`MPR` é `const` declarado embaixo do init. Após `await caseStore.loadActiveCase()`
+o módulo retoma mas as declarações abaixo do await **ainda estão em TDZ**. Acessar
+`typeof MPR !== 'undefined'` lá joga ReferenceError silenciosamente engolido pelo
+outer try/catch — resultado: "No default planning data — waiting for import".
+**Solução**: ao invés de queue o NIfTI durante init, `initMPR()` (que roda só
+quando user clica CT) faz `await caseStore.loadActiveCase()` e pega o `niftiBuffer`
+diretamente.
+
 Funciona:
 - Botão `CT` na topbar abre coluna 400px com NiiVue 0.69 + NIfTI 64MB (gitignored em `data/`)
 - Layout `MULTIPLANAR_TYPE.COLUMN` (axial/coronal/sagittal empilhados)
