@@ -950,6 +950,7 @@
     <button class="btn btn-ghost btn-sm" id="btn-ct" title="Toggle CT MPR column">CT</button>
     <button class="btn btn-ghost btn-sm" id="btn-import-folder" title="Import legacy GPS folder">Folder</button>
     <button class="btn btn-primary btn-sm" id="btn-import-zip" title="Import pipeline planning_package.zip">Import ZIP</button>
+    <button class="btn btn-ghost btn-sm" id="btn-reset-case" title="Discard the imported case and reload the demo" style="display:none">Reset</button>
   </div>
 
   <!-- ── LEFT SIDEBAR ── -->
@@ -1316,6 +1317,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import * as caseStore from './js/caseStore.js';
 
 // ── State ──
 let cutViewActive = false;
@@ -2422,6 +2424,10 @@ async function importCasePackageZip(file) {
   const humerusObjText = humerusFile ? await humerusFile.async('text') : null;
   const niftiBuffer    = niftiFile   ? await niftiFile.async('arraybuffer') : null;
 
+  console.log('[ImportZip] Extracted from', file.name + ':',
+    { hasPayload: !!payload, scapulaObjLen: scapulaObjText?.length || 0,
+      humerusObjLen: humerusObjText?.length || 0,
+      niftiBufBytes: niftiBuffer?.byteLength || 0 });
   return { payload, scapulaObjText, humerusObjText, niftiBuffer, fileName: file.name };
 }
 
@@ -2548,6 +2554,28 @@ async function applyPipelineCase(parsed) {
   setViewFn('glenoid');
   refreshUI();
   scheduleContactUpdate();
+
+  // Persist the case so navigating to humerus.html / surgery-dashboard.html
+  // and reloads can see the imported data. Survives across pages because it
+  // lives in IndexedDB.
+  try {
+    await caseStore.saveCase({
+      caseId: planning.caseId,
+      payload: parsed.payload,
+      scapulaObj: parsed.scapulaObjText,
+      humerusObj: parsed.humerusObjText,
+      niftiBuffer: parsed.niftiBuffer,
+      fileName: parsed.fileName,
+    });
+    caseStore.setActiveCase(planning.caseId);
+    console.log('[caseStore] persisted case', planning.caseId);
+  } catch (e) {
+    console.warn('[caseStore] persist failed (continuing in-memory):', e);
+  }
+
+  // Reset button (UI affordance) becomes useful once a case is imported
+  const resetBtn = document.getElementById('btn-reset-case');
+  if (resetBtn) resetBtn.style.display = '';
 
   showToast(`Imported: ${planning.patientId || planning.caseId}`, 4000);
 }
@@ -2965,35 +2993,54 @@ function animate() {
 resize();
 animate();
 
-// Try loading planning data: pipeline format first, then legacy GPS format
+// Try loading planning data — order of preference:
+//   1. Active imported case in IndexedDB (set by zip import)
+//   2. Pipeline format on disk (planning_payload.json + scapula.obj)
+//   3. Legacy GPS format (planning.json + scapula.obj)
 try {
   let planning = null;
   let isPipeline = false;
+  let activeCase = null;
+  let scapulaUrl = null;
+  try { activeCase = await caseStore.loadActiveCase(); }
+  catch (e) { console.warn('[Init] caseStore failed:', e); }
 
-  // 1. Try pipeline format (planning_payload.json)
-  try {
-    const payload = await fetch('data/planning_payload.json').then(r => {
-      if (!r.ok) throw new Error('No planning_payload.json');
-      return r.json();
-    });
-    planning = parsePipelinePayload(payload);
+  if (activeCase && activeCase.payload && activeCase.scapulaObj) {
+    planning = parsePipelinePayload(activeCase.payload);
     isPipeline = true;
-    console.log('[Init] Loaded pipeline planning_payload.json — case:', planning.caseId);
-  } catch (pipeErr) {
-    // 2. Fallback to legacy GPS format (planning.json)
-    const legacy = await fetch('data/planning.json').then(r => {
-      if (!r.ok) throw new Error('No planning.json');
-      return r.json();
-    });
-    planning = legacy;
-    console.log('[Init] Loaded legacy planning.json — case:', planning.caseId);
+    scapulaUrl = URL.createObjectURL(new Blob([activeCase.scapulaObj], { type: 'text/plain' }));
+    // The CT NIfTI is picked up later by initMPR() (it reads caseStore on demand).
+    // We can't set MPR.pendingVolumeUrl here because the MPR const is declared
+    // further down in this module and is still in the TDZ at this point.
+    console.log('[Init] Loaded imported case from IndexedDB:', planning.caseId);
+  } else {
+    // 1. Try pipeline format (planning_payload.json)
+    try {
+      const payload = await fetch('data/planning_payload.json').then(r => {
+        if (!r.ok) throw new Error('No planning_payload.json');
+        return r.json();
+      });
+      planning = parsePipelinePayload(payload);
+      isPipeline = true;
+      console.log('[Init] Loaded pipeline planning_payload.json — case:', planning.caseId);
+    } catch (pipeErr) {
+      // 2. Fallback to legacy GPS format (planning.json)
+      const legacy = await fetch('data/planning.json').then(r => {
+        if (!r.ok) throw new Error('No planning.json');
+        return r.json();
+      });
+      planning = legacy;
+      console.log('[Init] Loaded legacy planning.json — case:', planning.caseId);
+    }
   }
 
   state.planning = planning;
 
   // Cache-bust OBJ URLs to prevent stale browser caches
   const cacheBust = '?v=' + Date.now();
-  scapulaMesh = await loadScapula('data/scapula.obj' + cacheBust);
+  // Use the imported scapula URL (if any) — falls back to the demo file
+  scapulaMesh = await loadScapula(scapulaUrl || ('data/scapula.obj' + cacheBust));
+  if (scapulaUrl) URL.revokeObjectURL(scapulaUrl);
   scene.add(scapulaMesh);
 
   const g = planning.planning.patientRefToGlenoidRef;
@@ -3123,6 +3170,22 @@ document.getElementById('zip-import').addEventListener('change', async (e) => {
   e.target.value = ''; // reset for re-import
   if (file) await runZipImport(file);
 });
+
+// Reset to demo: clears the active-case flag and reloads. The IndexedDB
+// record is left behind (so re-activating later is cheap) but the planner
+// goes back to the built-in demo case on the next render.
+document.getElementById('btn-reset-case').addEventListener('click', () => {
+  if (!confirm('Discard the imported case and return to the demo?')) return;
+  try { flushAllPendingSaves(); } catch (_) {}
+  caseStore.clearActiveCase();
+  window.location.reload();
+});
+
+// On init, surface the Reset button if a case is already active
+if (caseStore.getActiveCaseId()) {
+  const resetBtn = document.getElementById('btn-reset-case');
+  if (resetBtn) resetBtn.style.display = '';
+}
 
 // Global drag-and-drop: accept .zip anywhere on the window.
 // Use `dataTransfer.types.includes('Files')` instead of `items[].kind` because
@@ -4116,9 +4179,19 @@ async function initMPR() {
       dragMode: niivue.DRAG_MODE.none,
     });
     await nv.attachToCanvas(document.getElementById('ct-canvas'));
-    // Prefer a NIfTI imported via zip in the current session, else the demo case.
-    // NiiVue infers the file format from the URL extension; blob: URLs have none,
-    // so we pass `name` with a known extension when serving an imported file.
+    // Prefer a NIfTI imported via zip (current session OR persisted across reloads
+    // via IndexedDB), else the demo case. NiiVue infers the file format from the
+    // URL extension; blob: URLs have none, so we pass `name` with a known
+    // extension when serving an imported file.
+    if (!MPR.pendingVolumeUrl) {
+      try {
+        const active = await caseStore.loadActiveCase();
+        if (active?.niftiBuffer) {
+          MPR.pendingVolumeUrl  = URL.createObjectURL(new Blob([active.niftiBuffer], { type: 'application/gzip' }));
+          MPR.pendingVolumeName = 'imported.nii.gz';
+        }
+      } catch (e) { console.warn('[MPR] caseStore CT lookup failed:', e); }
+    }
     let volumeOpts;
     if (MPR.pendingVolumeUrl) {
       volumeOpts = {

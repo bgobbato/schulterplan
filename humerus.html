@@ -625,6 +625,7 @@
 
 <script type="module">
 import * as THREE from 'three';
+import * as caseStore from './js/caseStore.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
@@ -1065,22 +1066,50 @@ function restoreEditedFromRemoved(removedArr) {
 (async () => {
   const cb = '?v=' + Date.now();
   let pipeline = null;
-  // 1. Try pipeline planning_payload.json
-  try {
-    const r = await fetch('data/planning_payload.json' + cb);
-    if (r.ok) pipeline = await r.json();
-  } catch (e) { /* ignore */ }
+  let humerusUrl = null;
 
-  // 2. Pick OBJ: pipeline humerus.obj if available, else legacy
+  // 0. Prefer the imported case in IndexedDB (set by zip import in test-heroui.html)
+  let activeCase = null;
+  try { activeCase = await caseStore.loadActiveCase(); }
+  catch (e) { console.warn('[Humerus] caseStore failed:', e); }
+  console.log('[Humerus] caseStore activeCase:',
+    activeCase
+      ? { caseId: activeCase.caseId,
+          hasPayload: !!activeCase.payload,
+          hasScapulaObj: !!activeCase.scapulaObj,
+          hasHumerusObj: !!activeCase.humerusObj,
+          hasNiftiBuffer: !!activeCase.niftiBuffer }
+      : 'none');
+  if (activeCase && activeCase.payload) {
+    pipeline = activeCase.payload;
+    if (activeCase.humerusObj) {
+      humerusUrl = URL.createObjectURL(new Blob([activeCase.humerusObj], { type: 'text/plain' }));
+      console.log('[Humerus] Using imported humerus from IndexedDB:', activeCase.caseId);
+    } else {
+      console.warn('[Humerus] Active case has no humerusObj — falling back to demo humerus.obj');
+    }
+  }
+
+  // 1. Fallback: fetch the demo payload on disk
+  if (!pipeline) {
+    try {
+      const r = await fetch('data/planning_payload.json' + cb);
+      if (r.ok) pipeline = await r.json();
+    } catch (e) { /* ignore */ }
+  }
+
+  // 2. Pick OBJ: imported humerus (blob URL) → pipeline humerus.obj → legacy
   let geom;
   let usedPipeline = false;
   try {
-    geom = await loadHumerusObj('data/humerus.obj' + cb, progressHandler);
+    geom = await loadHumerusObj(humerusUrl || ('data/humerus.obj' + cb), progressHandler);
     usedPipeline = !!pipeline;
-    console.log('[Humerus] Loaded data/humerus.obj' + (usedPipeline ? ' (pipeline landmarks available)' : ' (no payload — auto-orient)'));
+    console.log('[Humerus] Loaded humerus' + (usedPipeline ? ' (pipeline landmarks available)' : ' (no payload — auto-orient)'));
   } catch (e) {
     console.warn('[Humerus] pipeline OBJ failed, falling back to legacy:', e.message);
     geom = await loadHumerusObj('data/humerus.exported.obj' + cb, progressHandler);
+  } finally {
+    if (humerusUrl) URL.revokeObjectURL(humerusUrl);
   }
 
   // 3. Orient the bone
