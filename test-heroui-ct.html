@@ -840,12 +840,56 @@
   #btn-ct.active {
     box-shadow: 0 0 0 1.5px rgba(99,102,241,0.55) inset;
   }
+
+  /* ── Drop overlay (drag-and-drop zip import) ────────────────────────── */
+  #drop-overlay {
+    position: fixed; inset: 0;
+    background: rgba(8, 10, 18, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9000;
+    display: none;
+    align-items: center; justify-content: center;
+    pointer-events: none; /* enabled by JS while dragging */
+  }
+  #drop-overlay.active { display: flex; }
+  .drop-card {
+    border: 2px dashed rgba(99,102,241,0.65);
+    background: rgba(20, 22, 36, 0.92);
+    border-radius: 18px;
+    padding: 40px 56px;
+    text-align: center;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+    max-width: 460px;
+  }
+  .drop-icon {
+    font-size: 56px; line-height: 1; margin-bottom: 12px;
+    color: rgba(165, 180, 252, 0.95);
+  }
+  .drop-title {
+    font-size: 18px; font-weight: 600; color: #e2e8f0;
+    margin-bottom: 6px;
+  }
+  .drop-sub {
+    font-size: 13px; color: #94a3b8;
+  }
+  /* Toast styling for import progress / errors (uses existing showToast) */
 </style>
 </head>
 <body>
 
-<!-- Hidden file input for folder import -->
+<!-- Hidden file inputs -->
 <input type="file" id="folder-import" webkitdirectory directory multiple style="display:none" />
+<input type="file" id="zip-import" accept=".zip,application/zip" style="display:none" />
+
+<!-- Drop overlay (shown when user drags a file over the window) -->
+<div id="drop-overlay">
+  <div class="drop-card">
+    <div class="drop-icon">⬇</div>
+    <div class="drop-title">Drop the planning_package.zip</div>
+    <div class="drop-sub">Pipeline output: payload + meshes + CT NIfTI</div>
+  </div>
+</div>
 
 <div class="app">
   <!-- ── TOPBAR ── -->
@@ -904,7 +948,8 @@
     </div>
     <button class="btn btn-ghost btn-sm" id="btn-auto-measure">Measure</button>
     <button class="btn btn-ghost btn-sm" id="btn-ct" title="Toggle CT MPR column">CT</button>
-    <button class="btn btn-primary btn-sm" id="btn-import-folder">Import</button>
+    <button class="btn btn-ghost btn-sm" id="btn-import-folder" title="Import legacy GPS folder">Folder</button>
+    <button class="btn btn-primary btn-sm" id="btn-import-zip" title="Import pipeline planning_package.zip">Import ZIP</button>
   </div>
 
   <!-- ── LEFT SIDEBAR ── -->
@@ -2327,6 +2372,205 @@ async function applyImportedCase(imported) {
   showToast(`Case ${state.planning.caseId} imported`);
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+   PIPELINE ZIP IMPORT (planning_package.zip — output of the backend)
+
+   Browser-only: the zip is parsed in memory, the scapula OBJ + payload
+   are applied to the scene, and the CT NIfTI is fed to NiiVue via a Blob
+   URL. Nothing leaves the user's machine — perfect for privacy.
+
+   Expected zip structure (path matching is regex-flexible):
+     planning_payload.json
+     models/scapula_planning.obj
+     models/humerus_planning.obj   (optional, kept for cross-page later)
+     processing/selected_series_0000.nii.gz   (optional)
+
+   Issues covered: BGO-79 (UI + drop), BGO-80 (JSZip), BGO-82 (apply).
+────────────────────────────────────────────────────────────────────── */
+
+let _importingZip = false;
+
+async function importCasePackageZip(file) {
+  // Dynamic import — no global dependency, no build step
+  let JSZip;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+    JSZip = mod.default || mod;
+  } catch (e) {
+    throw new Error('Failed to load JSZip from CDN: ' + e.message);
+  }
+  const zip = await JSZip.loadAsync(file);
+
+  const findFile = (regex) => {
+    for (const path of Object.keys(zip.files)) {
+      const f = zip.files[path];
+      if (!f.dir && regex.test(path)) return f;
+    }
+    return null;
+  };
+
+  const payloadFile = findFile(/planning_payload\.json$/i);
+  const scapulaFile = findFile(/scapula.*\.obj$/i);
+  const humerusFile = findFile(/humerus.*\.obj$/i);
+  const niftiFile   = findFile(/\.nii\.gz$/i);
+
+  if (!payloadFile) throw new Error('Missing planning_payload.json in zip');
+  if (!scapulaFile) throw new Error('Missing scapula OBJ in zip');
+
+  const payload        = JSON.parse(await payloadFile.async('text'));
+  const scapulaObjText = await scapulaFile.async('text');
+  const humerusObjText = humerusFile ? await humerusFile.async('text') : null;
+  const niftiBuffer    = niftiFile   ? await niftiFile.async('arraybuffer') : null;
+
+  return { payload, scapulaObjText, humerusObjText, niftiBuffer, fileName: file.name };
+}
+
+async function applyPipelineCase(parsed) {
+  // Persist any pending state from the OUTGOING case before swapping
+  try { flushAllPendingSaves(); } catch (_) {}
+
+  // Clear current scene + caches
+  if (scapulaMesh)     { scene.remove(scapulaMesh);     scapulaMesh = null; }
+  if (scapulaBackMesh) { scene.remove(scapulaBackMesh); scapulaBackMesh = null; }
+  if (implantMesh)     { scene.remove(implantMesh);     implantMesh = null; }
+  glenoidRayMesh    = null;
+  backSurfaceCache  = null;
+
+  // Parse payload → state.planning
+  const planning = parsePipelinePayload(parsed.payload);
+  state.planning      = planning;
+  state.adjust        = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+  state.scenarios     = [];
+  state.selectedImplant = null;
+
+  // Load scapula from a blob URL so loadScapula() works unchanged
+  const scapulaBlob = new Blob([parsed.scapulaObjText], { type: 'text/plain' });
+  const scapulaUrl  = URL.createObjectURL(scapulaBlob);
+  try {
+    scapulaMesh = await loadScapula(scapulaUrl);
+  } finally {
+    URL.revokeObjectURL(scapulaUrl);
+  }
+  scene.add(scapulaMesh);
+
+  // Axes from P2G + payload normal (same logic as init)
+  const g = planning.planning.patientRefToGlenoidRef;
+  glenoidRight.set(g[0], g[4], g[8]).normalize();
+  glenoidUp.set(g[1], g[5], g[9]).normalize();
+  friedmanAxis.set(g[2], g[6], g[10]).normalize();
+  const sn = planning._pipelinePayload.planes.glenoid_plane.normal_xyz;
+  glenoidNormal.set(sn[0], sn[1], sn[2]).normalize();
+  if (glenoidNormal.dot(friedmanAxis) < 0) glenoidNormal.negate();
+
+  // Re-center: glenoid_center → world origin
+  const rawCenter = new THREE.Vector3(g[3], g[7], g[11]);
+  scapulaMesh.position.set(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+  scapulaMesh.updateMatrixWorld(true);
+  planning.planning.patientRefToGlenoidRef[3]  = 0;
+  planning.planning.patientRefToGlenoidRef[7]  = 0;
+  planning.planning.patientRefToGlenoidRef[11] = 0;
+  glenoidCenter.set(0, 0, 0);
+
+  // Back mesh (same offset)
+  let firstGeom = null;
+  scapulaMesh.traverse(c => { if (c.isMesh && !firstGeom) firstGeom = c.geometry; });
+  if (firstGeom) {
+    buildScapulaBackMesh(firstGeom);
+    if (scapulaBackMesh) {
+      scapulaBackMesh.position.copy(scapulaMesh.position);
+      scapulaBackMesh.updateMatrixWorld(true);
+    }
+  }
+
+  viewDistance = 80;
+  document.getElementById('viewer-placeholder').style.display = 'none';
+
+  // Restore implant state for the NEW caseId (in case user re-imports)
+  const saved = loadImplantState();
+  if (saved) {
+    if (saved.selectedImplant) state.selectedImplant = saved.selectedImplant;
+    if (saved.adjust)          state.adjust = { ...state.adjust, ...saved.adjust };
+    if (Array.isArray(saved.scenarios)) state.scenarios = saved.scenarios;
+  }
+  if (state.selectedImplant) await setImplant(state.selectedImplant);
+
+  // Restore scapula lasso edits if any for this caseId
+  try { restoreScapulaEdit(); } catch (_) {}
+
+  // CT NIfTI — hand off to NiiVue (replace if loaded, queue if not)
+  if (parsed.niftiBuffer) {
+    // Free any previous imported NIfTI URL
+    if (MPR.pendingVolumeUrl) URL.revokeObjectURL(MPR.pendingVolumeUrl);
+    const niftiBlob = new Blob([parsed.niftiBuffer], { type: 'application/gzip' });
+    MPR.pendingVolumeUrl  = URL.createObjectURL(niftiBlob);
+    // Always end with .nii.gz so NiiVue's getFileExt() picks the NIfTI loader.
+    // The zip's filename has no extension hint NiiVue can parse from a blob URL.
+    MPR.pendingVolumeName = (parsed.fileName || '').toLowerCase().endsWith('.nii.gz')
+      ? parsed.fileName
+      : 'imported.nii.gz';
+    if (MPR.nv) {
+      try {
+        await MPR.nv.loadVolumes([{
+          url: MPR.pendingVolumeUrl,
+          name: MPR.pendingVolumeName,
+          colormap: 'gray',
+        }]);
+        // Re-anchor crosshair to NEW glenoid center
+        const gc = planning._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+        if (gc) {
+          const niiPos = pipelineToNiiVueMM(gc);
+          MPR.nv.scene.crosshairPos = MPR.nv.mm2frac(niiPos);
+        }
+        // Rebuild overlay's sceneToNiiVue matrix for the new glenoid_center
+        if (MPR.overlay) {
+          const gc_pipe = planning._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+          if (gc_pipe) {
+            MPR.overlay.sceneToNiiVue = new THREE.Matrix4().set(
+              -1,  0, 0, -gc_pipe[0],
+               0, -1, 0, -gc_pipe[1],
+               0,  0, 1,  gc_pipe[2],
+               0,  0, 0,           1
+            );
+          }
+          // Recompute volume centre for the new volume
+          const volCenter = MPR.nv.frac2mm([0.5, 0.5, 0.5]);
+          MPR.overlay.volCenter = [volCenter[0], volCenter[1], volCenter[2]];
+          updateImplantOverlayMesh();
+          drawMPROverlay();
+        }
+        MPR.nv.drawScene();
+      } catch (e) {
+        console.warn('[Import] NiiVue volume reload failed:', e);
+      }
+    }
+  }
+
+  setViewFn('glenoid');
+  refreshUI();
+  scheduleContactUpdate();
+
+  showToast(`Imported: ${planning.patientId || planning.caseId}`, 4000);
+}
+
+async function runZipImport(file) {
+  if (_importingZip) {
+    showToast('Import already running, please wait', 3000);
+    return;
+  }
+  _importingZip = true;
+  showToast('Reading zip…');
+  try {
+    const parsed = await importCasePackageZip(file);
+    showToast('Applying case…');
+    await applyPipelineCase(parsed);
+  } catch (err) {
+    console.error('[ImportZip]', err);
+    showToast('Import failed: ' + (err.message || err), 6000);
+  } finally {
+    _importingZip = false;
+  }
+}
+
 // ── Bone Contact Analysis (Raycasting) ──
 
 // Cached sub-mesh of glenoid region for fast raycasting
@@ -2869,6 +3113,56 @@ document.getElementById('folder-import').addEventListener('change', async (e) =>
   }
   e.target.value = ''; // reset for re-import
 });
+
+// ── Pipeline zip import (BGO-79) ──
+document.getElementById('btn-import-zip').addEventListener('click', () => {
+  document.getElementById('zip-import').click();
+});
+document.getElementById('zip-import').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = ''; // reset for re-import
+  if (file) await runZipImport(file);
+});
+
+// Global drag-and-drop: accept .zip anywhere on the window
+(() => {
+  const overlay = document.getElementById('drop-overlay');
+  let dragDepth = 0;
+  const hasFile = (e) => {
+    if (!e.dataTransfer) return false;
+    const items = e.dataTransfer.items;
+    if (!items) return false;
+    for (const it of items) if (it.kind === 'file') return true;
+    return false;
+  };
+  window.addEventListener('dragenter', (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    overlay.classList.add('active');
+  });
+  window.addEventListener('dragover', (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  window.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) overlay.classList.remove('active');
+  });
+  window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dragDepth = 0;
+    overlay.classList.remove('active');
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    if (!/\.zip$/i.test(file.name)) {
+      showToast('Drop a .zip file (planning_package format)', 3500);
+      return;
+    }
+    await runZipImport(file);
+  });
+})();
 
 // Adjust controls
 document.querySelectorAll('.ctrl-btn[data-axis]').forEach(btn => {
@@ -3813,10 +4107,24 @@ async function initMPR() {
       dragMode: niivue.DRAG_MODE.none,
     });
     await nv.attachToCanvas(document.getElementById('ct-canvas'));
-    await nv.loadVolumes([{
-      url: 'data/selected_series_0000.nii.gz?v=' + Date.now(),
-      colormap: 'gray',
-    }]);
+    // Prefer a NIfTI imported via zip in the current session, else the demo case.
+    // NiiVue infers the file format from the URL extension; blob: URLs have none,
+    // so we pass `name` with a known extension when serving an imported file.
+    let volumeOpts;
+    if (MPR.pendingVolumeUrl) {
+      volumeOpts = {
+        url: MPR.pendingVolumeUrl,
+        name: MPR.pendingVolumeName || 'imported.nii.gz',
+        colormap: 'gray',
+      };
+    } else {
+      volumeOpts = {
+        url: 'data/selected_series_0000.nii.gz?v=' + Date.now(),
+        colormap: 'gray',
+      };
+    }
+    console.log('[MPR] loadVolumes opts:', volumeOpts);
+    await nv.loadVolumes([volumeOpts]);
     MPR.nv = nv;
     console.log('[MPR] Volume loaded:', nv.volumes[0].dims,
                 'cal_min:', nv.volumes[0].cal_min,
