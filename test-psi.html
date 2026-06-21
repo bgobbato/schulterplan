@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PSI Prototype — Scapula Tripod Guide</title>
+<style>
+  :root {
+    --bg: #0a0a14;
+    --panel: #161625;
+    --panel-2: #1f1f33;
+    --border: #2a2a45;
+    --text: #e4e4f0;
+    --text-dim: #8888a0;
+    --accent: #6c8cff;
+    --upper: #ff5470;    /* leg P1 */
+    --middle: #5fd96e;   /* leg P2 */
+    --lower: #4fc3ff;    /* leg P3 */
+    --warn: #ffb84d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    grid-template-rows: 44px 1fr;
+  }
+  header {
+    grid-column: 1 / 4;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    font-size: 14px;
+  }
+  header .title { font-weight: 600; color: var(--accent); }
+  header .case  { color: var(--text-dim); font-size: 12px; }
+  header nav { margin-left: auto; display: flex; gap: 12px; }
+  header nav a { color: var(--text-dim); text-decoration: none; font-size: 12px; }
+  header nav a:hover { color: var(--text); }
+
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .sidebar.right {
+    border-right: none;
+    border-left: 1px solid var(--border);
+  }
+  .section {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.secondary { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
+  .btn.warn { background: var(--warn); color: #221; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .leg-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .leg-row:last-child { border-bottom: none; }
+  .leg-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .leg-dot.upper  { background: var(--upper); }
+  .leg-dot.middle { background: var(--middle); }
+  .leg-dot.lower  { background: var(--lower); }
+  .leg-info { flex: 1; }
+  .leg-info .name { font-weight: 600; }
+  .leg-info .coord { color: var(--text-dim); font-size: 10px; font-family: monospace; }
+
+  .viewer-wrap { position: relative; }
+  canvas { width: 100%; height: 100%; display: block; }
+
+  .hud {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(0,0,0,0.6);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+  .hud b { color: var(--text); }
+
+  .toolbar {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 6px;
+    display: flex; gap: 4px;
+  }
+  .toolbar button {
+    width: 36px; height: 36px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 50%;
+    font-size: 14px;
+  }
+  .toolbar button.active { background: var(--accent); color: white; }
+  .toolbar button:hover { color: var(--text); }
+
+  .info-grid { display: grid; grid-template-columns: auto auto; gap: 4px 12px; font-size: 11px; }
+  .info-grid .k { color: var(--text-dim); }
+  .info-grid .v { color: var(--text); font-family: monospace; }
+
+  .validation {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; padding: 4px 0;
+  }
+  .validation .check { color: var(--middle); }
+  .validation .fail  { color: var(--upper); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">PSI Prototype</div>
+  <div class="case" id="case-label">Loading…</div>
+  <nav>
+    <a href="test-heroui.html" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--panel-2);color:var(--text);">← Back to Planner</a>
+    <a href="humerus.html">Humerus</a>
+    <a href="surgery-dashboard.html">Dashboard</a>
+  </nav>
+</header>
+
+<aside class="sidebar left">
+  <div class="section">
+    <h3>Legs (drag to position)</h3>
+    <div class="leg-row">
+      <div class="leg-dot upper"></div>
+      <div class="leg-info">
+        <div class="name">Upper leg</div>
+        <div class="coord" id="coord-upper">—</div>
+      </div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot middle"></div>
+      <div class="leg-info">
+        <div class="name">Middle leg</div>
+        <div class="coord" id="coord-middle">—</div>
+      </div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot lower"></div>
+      <div class="leg-info">
+        <div class="name">Lower leg</div>
+        <div class="coord" id="coord-lower">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Actions</h3>
+    <button class="btn secondary" id="btn-reset-legs">Reset to auto positions</button>
+    <button class="btn" id="btn-generate">Generate PSI</button>
+    <button class="btn secondary" id="btn-download" disabled>Download STL</button>
+  </div>
+
+  <div class="section">
+    <h3>Patient ID (embossed on guide)</h3>
+    <input type="text" id="patient-id-input" maxlength="10"
+      placeholder="e.g. JD-12345"
+      style="width:100%; padding:6px 8px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; font-size:12px; font-family:monospace;">
+    <div style="font-size:10px; color:var(--text-dim); margin-top:4px; line-height:1.3;">
+      Max 10 chars. Embossed along K-axis on upper part of central cylinder, facing lateral side.
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Display</h3>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;">
+      <input type="checkbox" id="toggle-kwire" checked> Show K-wire trajectory
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;">
+      <input type="checkbox" id="toggle-plane" checked> Show contact plane
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;">
+      <input type="checkbox" id="toggle-skeleton"> Show PSI skeleton (wireframe)
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;">
+      <input type="checkbox" id="toggle-scapula" checked> Show scapula
+    </label>
+  </div>
+
+  <div class="section">
+    <h3>Engine</h3>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;" title="manifold-3d (WASM) is slower but guarantees manifold output (0 open edges)">
+      <input type="radio" name="engine" id="engine-manifold" checked> manifold-3d (WASM, manifold ✓)
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;" title="three-bvh-csg is faster but produces T-junctions (~10k open edges)">
+      <input type="radio" name="engine" id="engine-bvh"> three-bvh-csg (fast, non-manifold)
+    </label>
+  </div>
+
+  <div class="section">
+    <h3>Debug</h3>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;" title="Skip the scapula subtraction step — useful to isolate bone-CSG artifacts">
+      <input type="checkbox" id="toggle-skip-bone"> Skip bone subtraction
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;" title="Color triangles adjacent to open edges in red">
+      <input type="checkbox" id="toggle-show-open"> Highlight open edges
+    </label>
+  </div>
+</aside>
+
+<div class="viewer-wrap">
+  <canvas id="viewer-canvas"></canvas>
+  <div class="hud" id="hud">Drag the colored spheres on the glenoid rim</div>
+  <div class="toolbar">
+    <button id="view-glenoid" class="active" title="Glenoid view">G</button>
+    <button id="view-anterior" title="Anterior">A</button>
+    <button id="view-lateral" title="Lateral">L</button>
+    <button id="view-superior" title="Superior">S</button>
+  </div>
+</div>
+
+<aside class="sidebar right">
+  <div class="section">
+    <h3>Geometry parameters</h3>
+    <div class="info-grid">
+      <div class="k">Foot Ø × H</div><div class="v">10 × 6 mm</div>
+      <div class="k">Foot embed</div><div class="v">3 mm</div>
+      <div class="k">Central Ø × H</div><div class="v">10 × 20 mm</div>
+      <div class="k">Central offset</div><div class="v">3 mm from K-wire entry</div>
+      <div class="k">Leg Ø</div><div class="v">6 mm</div>
+      <div class="k">Leg direction</div><div class="v">free (foot → central)</div>
+      <div class="k">K-wire Ø</div><div class="v">2.5 mm</div>
+      <div class="k">Bone offset</div><div class="v">0.5 mm</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Validation</h3>
+    <div class="validation" id="val-spacing"><span class="check">✓</span> Leg spacing</div>
+    <div class="validation" id="val-rim"><span class="check">✓</span> All legs on bone</div>
+    <div class="validation" id="val-spread"><span class="check">✓</span> Triangle non-degenerate</div>
+    <div class="validation" id="val-kwire"><span class="check">✓</span> K-wire clears legs</div>
+  </div>
+
+  <div class="section">
+    <h3>K-wire axis (from implant)</h3>
+    <div class="info-grid" id="kwire-info">
+      <div class="k">origin</div><div class="v" id="kwire-origin">—</div>
+      <div class="k">direction</div><div class="v" id="kwire-direction">—</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Notes</h3>
+    <div style="font-size:11px; color:var(--text-dim); line-height:1.4;">
+      Drag each colored sphere to position a foot point on the glenoid rim.
+      The spheres snap to the bone surface. Try to keep them roughly
+      120° apart around the glenoid center.
+    </div>
+  </div>
+</aside>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "three-mesh-bvh": "https://esm.sh/three-mesh-bvh@0.7.6?deps=three@0.160.0",
+    "three-bvh-csg": "https://esm.sh/three-bvh-csg@0.0.17?deps=three@0.160.0,three-mesh-bvh@0.7.6",
+    "manifold-3d": "https://cdn.jsdelivr.net/npm/manifold-3d@2.5.1/manifold.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader }     from 'three/addons/loaders/OBJLoader.js';
+import { STLExporter }   from 'three/addons/exporters/STLExporter.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { FontLoader }    from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry }  from 'three/addons/geometries/TextGeometry.js';
+import { Brush, Evaluator, ADDITION, SUBTRACTION } from 'three-bvh-csg';
+import ManifoldModule from 'manifold-3d';
+import * as caseStore from './js/caseStore.js';
+
+// ──────────────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────────────
+const state = {
+  planning: null,
+  caseId: null,
+  // Leg positions stored in WORLD coordinates (after scapula re-centering).
+  // Order: [upper, middle, lower]
+  legs: [null, null, null],
+  draggingLeg: -1,
+  patientId: '',   // up to 10 chars, embossed on central cylinder upper part
+};
+const LEG_NAMES = ['upper', 'middle', 'lower'];
+const LEG_COLORS = [0xff5470, 0x5fd96e, 0x4fc3ff];
+
+// ──────────────────────────────────────────────────────────────────────
+// Three.js setup
+// ──────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('viewer-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a14);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
+camera.position.set(0, 0, 150);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl1 = new THREE.DirectionalLight(0xffffff, 0.7);
+dl1.position.set(1, 1, 1); scene.add(dl1);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.3);
+dl2.position.set(-1, -1, -1); scene.add(dl2);
+
+// ──────────────────────────────────────────────────────────────────────
+// Globals populated during init
+// ──────────────────────────────────────────────────────────────────────
+let scapulaMesh = null;            // THREE.Group from OBJLoader
+let scapulaSurfaceMesh = null;     // THREE.Mesh for raycasting (first child)
+let glenoidCenter   = new THREE.Vector3();
+let glenoidNormal   = new THREE.Vector3();
+let glenoidUp       = new THREE.Vector3();
+let glenoidRight    = new THREE.Vector3();
+let friedmanAxis    = new THREE.Vector3();   // K_axis for PSI construction
+let viewDistance    = 120;
+
+// Visuals — created in initVisuals()
+const legSpheres = [null, null, null];
+const legSphereGroup = new THREE.Group();
+let kwireLine = null;
+let contactPlaneMesh = null;
+const skeletonGroup = new THREE.Group();
+scene.add(legSphereGroup);
+scene.add(skeletonGroup);
+
+// K-wire reference point. Defaults to glenoidCenter (=(0,0,0) post re-center).
+// Gets offset by implant plan adjustments (tx, ty, depth) so the PSI K-wire
+// trajectory matches where the surgeon placed the implant peg.
+let kwireOrigin = new THREE.Vector3(0, 0, 0);
+
+const LS_KEY = (caseId) => `schulterplan_psi_${caseId}`;
+
+// ──────────────────────────────────────────────────────────────────────
+// Pipeline payload parsing (lifted from test-heroui.html)
+// ──────────────────────────────────────────────────────────────────────
+function parsePipelinePayload(payload) {
+  const cas = payload.case || {};
+  const lm = payload.landmarks.scapula;
+  const axes = payload.axes.scapula;
+
+  // Build P2G from Friedman axis (Z) + glenoid SI (Y orthogonalized) + Right (X = cross)
+  const N = new THREE.Vector3(...axes.friedman.vector_xyz).normalize();           // Z = Friedman
+  const rawUp = new THREE.Vector3(...axes.glenoid_si.vector_xyz);
+  const U = rawUp.clone().addScaledVector(N, -rawUp.dot(N)).normalize();          // Y = Up ⟂ Friedman
+  const R = new THREE.Vector3().crossVectors(U, N).normalize();                   // X = Right
+  const center = new THREE.Vector3(...lm.glenoid_center.xyz_mm);
+
+  // Row-major 4x4: columns = [R, U, N, center]
+  const P2G = [
+    R.x, U.x, N.x, center.x,
+    R.y, U.y, N.y, center.y,
+    R.z, U.z, N.z, center.z,
+    0,   0,   0,   1,
+  ];
+
+  return {
+    caseId: cas.case_id || 'pipeline',
+    side: cas.side || 'R',
+    planning: {
+      patientRefToGlenoidRef: P2G,
+    },
+    _pipelinePayload: payload,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Scapula loader (cache-busted)
+// ──────────────────────────────────────────────────────────────────────
+function loadScapula(url) {
+  return new Promise((resolve, reject) => {
+    new OBJLoader().load(url, group => {
+      const mat = new THREE.MeshPhongMaterial({
+        color: 0xddd5c8, side: THREE.DoubleSide, transparent: false,
+      });
+      group.traverse(c => {
+        if (c.isMesh) {
+          c.material = mat;
+          if (!scapulaSurfaceMesh) scapulaSurfaceMesh = c;
+        }
+      });
+      resolve(group);
+    }, undefined, reject);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Compute initial leg positions (3 points at 120° around glenoid)
+// All projected onto the scapula surface via raycasting.
+// ──────────────────────────────────────────────────────────────────────
+function autoPlaceLegs() {
+  const radius = 14; // mm from glenoid center, on the glenoid plane
+  // 3 angles 120° apart, offset so upper=top, middle=lower-front, lower=lower-back
+  // (this is just a sensible default — user moves them)
+  const angles = [-90, 30, 150]; // degrees, 0° = +glenoidRight
+  const points = [];
+
+  for (let i = 0; i < 3; i++) {
+    const rad = angles[i] * Math.PI / 180;
+    // start: glenoid center + radial offset on the glenoid plane
+    const candidate = glenoidCenter.clone()
+      .add(glenoidRight.clone().multiplyScalar(radius * Math.cos(rad)))
+      .add(glenoidUp.clone().multiplyScalar(radius * Math.sin(rad)));
+    // snap to bone surface (raycast along -glenoidNormal from outside)
+    const snapped = snapToScapula(candidate);
+    points.push(snapped || candidate);
+  }
+  return points;
+}
+
+// Project a 3D point onto the scapula surface.
+// Strategy: raycast from (point + glenoidNormal * 50mm) toward -glenoidNormal,
+// pick the first intersection.
+function snapToScapula(point) {
+  if (!scapulaSurfaceMesh) return null;
+  const ray = new THREE.Raycaster();
+  const origin = point.clone().add(glenoidNormal.clone().multiplyScalar(50));
+  const dir = glenoidNormal.clone().negate();
+  ray.set(origin, dir);
+  ray.far = 200;
+  // Use world-space mesh
+  scapulaMesh.updateMatrixWorld(true);
+  const hits = ray.intersectObject(scapulaMesh, true);
+  if (hits.length === 0) return null;
+  return hits[0].point.clone();
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Leg sphere creation + drag
+// ──────────────────────────────────────────────────────────────────────
+function createLegSpheres() {
+  // clear old
+  while (legSphereGroup.children.length) legSphereGroup.remove(legSphereGroup.children[0]);
+  for (let i = 0; i < 3; i++) {
+    const geom = new THREE.SphereGeometry(2.0, 24, 16);
+    const mat = new THREE.MeshPhongMaterial({
+      color: LEG_COLORS[i],
+      emissive: LEG_COLORS[i], emissiveIntensity: 0.4,
+      depthTest: true,
+    });
+    const sphere = new THREE.Mesh(geom, mat);
+    sphere.position.copy(state.legs[i]);
+    sphere.userData = { legIndex: i, isLeg: true };
+    sphere.renderOrder = 5;
+    legSpheres[i] = sphere;
+    legSphereGroup.add(sphere);
+
+    // outline (thin wireframe)
+    const outline = new THREE.Mesh(
+      new THREE.SphereGeometry(2.6, 24, 16),
+      new THREE.MeshBasicMaterial({ color: LEG_COLORS[i], wireframe: true, opacity: 0.4, transparent: true })
+    );
+    outline.userData = { isOutline: true };
+    sphere.add(outline);
+  }
+  updateLegCoordsUI();
+  updateContactPlane();
+  updateKwireVisualization();
+  updateValidation();
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Drag interaction
+// ──────────────────────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function updateMouse(e) {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  updateMouse(e);
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(legSpheres, false);
+  if (hits.length > 0) {
+    state.draggingLeg = hits[0].object.userData.legIndex;
+    controls.enabled = false;
+    document.getElementById('hud').innerHTML = `Dragging <b>${LEG_NAMES[state.draggingLeg]} leg</b> — release to snap`;
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (state.draggingLeg < 0) return;
+  updateMouse(e);
+  raycaster.setFromCamera(mouse, camera);
+  raycaster.far = 5000;
+  const hits = raycaster.intersectObject(scapulaMesh, true);
+  if (hits.length > 0) {
+    const p = hits[0].point.clone();
+    state.legs[state.draggingLeg] = p;
+    legSpheres[state.draggingLeg].position.copy(p);
+    updateLegCoordsUI();
+    updateContactPlane();
+    updateKwireVisualization();
+    updateValidation();
+    if (document.getElementById('toggle-skeleton').checked) updateSkeleton();
+  }
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (state.draggingLeg >= 0) {
+    state.draggingLeg = -1;
+    controls.enabled = true;
+    saveState();
+    document.getElementById('hud').innerHTML = 'Drag the colored spheres on the glenoid rim';
+  }
+});
+
+// Esc to cancel drag
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state.draggingLeg >= 0) {
+    state.draggingLeg = -1;
+    controls.enabled = true;
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Visualizations
+// ──────────────────────────────────────────────────────────────────────
+function updateContactPlane() {
+  if (contactPlaneMesh) {
+    scene.remove(contactPlaneMesh);
+    contactPlaneMesh.geometry.dispose();
+    contactPlaneMesh.material.dispose();
+    contactPlaneMesh = null;
+  }
+  if (!state.legs[0] || !state.legs[1] || !state.legs[2]) return;
+  if (!document.getElementById('toggle-plane').checked) return;
+
+  const [P1, P2, P3] = state.legs;
+  const v1 = new THREE.Vector3().subVectors(P2, P1);
+  const v2 = new THREE.Vector3().subVectors(P3, P1);
+  let n = new THREE.Vector3().crossVectors(v1, v2).normalize();
+  // Orient toward outside of bone (same side as friedmanAxis)
+  if (n.dot(friedmanAxis) < 0) n.negate();
+  const centroid = new THREE.Vector3().addVectors(P1, P2).add(P3).divideScalar(3);
+
+  // Build a thin disc centered at centroid with normal n
+  const discGeom = new THREE.CircleGeometry(20, 48);
+  const discMat = new THREE.MeshBasicMaterial({
+    color: 0x6c8cff, opacity: 0.15, transparent: true, side: THREE.DoubleSide, depthWrite: false
+  });
+  contactPlaneMesh = new THREE.Mesh(discGeom, discMat);
+  // align disc normal (Z axis) with n
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+  contactPlaneMesh.quaternion.copy(q);
+  contactPlaneMesh.position.copy(centroid);
+  contactPlaneMesh.renderOrder = 1;
+  scene.add(contactPlaneMesh);
+
+  // Edge ring for clarity
+  const ringGeom = new THREE.RingGeometry(19.5, 20, 64);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x6c8cff, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(ringGeom, ringMat);
+  ring.quaternion.copy(q);
+  ring.position.copy(centroid);
+  contactPlaneMesh.add(ring);
+}
+
+function updateKwireVisualization() {
+  if (kwireLine) {
+    scene.remove(kwireLine);
+    kwireLine.geometry.dispose();
+    kwireLine.material.dispose();
+    kwireLine = null;
+  }
+  if (!document.getElementById('toggle-kwire').checked) return;
+
+  // K-wire trajectory: cylinder Ø2.5mm along friedmanAxis through kwireOrigin.
+  // kwireOrigin = glenoidCenter when no implant adjustment, otherwise offset by
+  // implant plan tx/ty/depth so the visual matches the planned implant position.
+  // Visualize ±60mm from the center.
+  const geom = new THREE.CylinderGeometry(1.25, 1.25, 120, 24);
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x33ff66, emissive: 0x33ff66, emissiveIntensity: 0.3,
+    transparent: true, opacity: 0.65, depthWrite: false
+  });
+  kwireLine = new THREE.Mesh(geom, mat);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), friedmanAxis);
+  kwireLine.quaternion.copy(q);
+  kwireLine.position.copy(kwireOrigin);
+  kwireLine.renderOrder = 2;
+  scene.add(kwireLine);
+}
+
+// PSI skeleton — wireframe preview of where the cylinders WILL be after CSG.
+// Uses computePSIGeometry() so it stays in sync with the boolean generator.
+function updateSkeleton() {
+  while (skeletonGroup.children.length) {
+    const c = skeletonGroup.children[0];
+    skeletonGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+  if (!document.getElementById('toggle-skeleton').checked) return;
+
+  const g = computePSIGeometry();
+  if (!g) return;
+
+  const addWireCylinder = (radius, height, axis, center, color, opacity = 0.6) => {
+    const geom = new THREE.CylinderGeometry(radius, radius, height, 24);
+    const mat = new THREE.MeshBasicMaterial({
+      color, wireframe: true, opacity, transparent: true
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+    mesh.quaternion.copy(q);
+    mesh.position.copy(center);
+    skeletonGroup.add(mesh);
+  };
+
+  // FEET (aligned with K_axis)
+  g.feet.forEach((f, i) => {
+    addWireCylinder(PSI.FOOT_DIAMETER / 2, PSI.FOOT_HEIGHT, g.K, f.footCenter, LEG_COLORS[i]);
+    // Fillet sphere at footTop
+    const sphGeom = new THREE.SphereGeometry(PSI.FILLET_DIAMETER / 2, 16, 8);
+    const sphMat = new THREE.MeshBasicMaterial({
+      color: LEG_COLORS[i], wireframe: true, opacity: 0.4, transparent: true,
+    });
+    const sph = new THREE.Mesh(sphGeom, sphMat);
+    sph.position.copy(f.footTop);
+    skeletonGroup.add(sph);
+  });
+
+  // LEGS (direction = footTop → centralCenter)
+  g.legs.forEach((leg, i) => {
+    if (!leg) return;
+    addWireCylinder(PSI.LEG_DIAMETER / 2, leg.length, leg.dir, leg.center, LEG_COLORS[i]);
+  });
+
+  // CENTRAL cylinder
+  addWireCylinder(PSI.CENTRAL_DIAMETER / 2, PSI.CENTRAL_HEIGHT, g.K, g.centralCenter, 0xffffff, 0.7);
+
+  // K-wire bone entry marker (small magenta sphere)
+  if (kwireBoneEntry) {
+    const markGeom = new THREE.SphereGeometry(1.0, 12, 8);
+    const markMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+    const mark = new THREE.Mesh(markGeom, markMat);
+    mark.position.copy(kwireBoneEntry);
+    skeletonGroup.add(mark);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// UI updates
+// ──────────────────────────────────────────────────────────────────────
+function updateLegCoordsUI() {
+  for (let i = 0; i < 3; i++) {
+    const el = document.getElementById('coord-' + LEG_NAMES[i]);
+    if (!el) continue;
+    if (!state.legs[i]) { el.textContent = '—'; continue; }
+    const p = state.legs[i];
+    el.textContent = `${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)}`;
+  }
+}
+
+function updateValidation() {
+  const ok = (id, msg, isOk) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelector('.check, .fail').remove();
+    const span = document.createElement('span');
+    span.className = isOk ? 'check' : 'fail';
+    span.textContent = isOk ? '✓' : '✗';
+    el.insertBefore(span, el.firstChild);
+    const text = el.lastChild;
+    text.textContent = ' ' + msg;
+  };
+
+  if (!state.legs[0] || !state.legs[1] || !state.legs[2]) return;
+  const [P1, P2, P3] = state.legs;
+
+  // 1. Spacing >= 12mm between any pair
+  const d12 = P1.distanceTo(P2);
+  const d23 = P2.distanceTo(P3);
+  const d31 = P3.distanceTo(P1);
+  const minD = Math.min(d12, d23, d31);
+  ok('val-spacing', `Min spacing ${minD.toFixed(1)} mm (target ≥12)`, minD >= 12);
+
+  // 2. All legs roughly within glenoid neighborhood (<= 35mm from center)
+  const allClose = state.legs.every(p => p.distanceTo(glenoidCenter) < 35);
+  ok('val-rim', allClose ? 'All on glenoid rim region' : 'Some legs too far', allClose);
+
+  // 3. Triangle non-degenerate: area > 50 mm²
+  const v1 = new THREE.Vector3().subVectors(P2, P1);
+  const v2 = new THREE.Vector3().subVectors(P3, P1);
+  const area = v1.clone().cross(v2).length() / 2;
+  ok('val-spread', `Triangle area ${area.toFixed(0)} mm² (target >50)`, area > 50);
+
+  // 4. K-wire clears the legs (each leg point at least 4mm from K_axis line)
+  const minKwireDist = Math.min(...state.legs.map(p => {
+    const toP = p.clone().sub(glenoidCenter);
+    const along = toP.dot(friedmanAxis);
+    const perp = toP.sub(friedmanAxis.clone().multiplyScalar(along));
+    return perp.length();
+  }));
+  ok('val-kwire', `Min ${minKwireDist.toFixed(1)} mm from K-wire (≥6)`, minKwireDist >= 6);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Persistence
+// ──────────────────────────────────────────────────────────────────────
+function saveState() {
+  if (!state.caseId) return;
+  try {
+    localStorage.setItem(LS_KEY(state.caseId), JSON.stringify({
+      version: 2,
+      caseId: state.caseId,
+      savedAt: new Date().toISOString(),
+      legs: state.legs.map(p => p ? [p.x, p.y, p.z] : null),
+      patientId: state.patientId || '',
+    }));
+  } catch (e) {
+    console.warn('Save failed:', e);
+  }
+}
+
+function loadState() {
+  if (!state.caseId) return null;
+  try {
+    const raw = localStorage.getItem(LS_KEY(state.caseId));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Camera views
+// ──────────────────────────────────────────────────────────────────────
+function setView(name) {
+  document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name)?.classList.add('active');
+
+  let viewDir, up;
+  switch (name) {
+    case 'glenoid':
+      viewDir = friedmanAxis.clone();
+      up = glenoidUp.clone();
+      break;
+    case 'anterior':
+      viewDir = new THREE.Vector3(0, 0, 1);
+      up = new THREE.Vector3(0, 1, 0);
+      break;
+    case 'lateral':
+      viewDir = new THREE.Vector3(1, 0, 0);
+      up = new THREE.Vector3(0, 1, 0);
+      break;
+    case 'superior':
+      viewDir = new THREE.Vector3(0, 1, 0);
+      up = new THREE.Vector3(0, 0, -1);
+      break;
+  }
+  camera.position.copy(glenoidCenter).add(viewDir.normalize().multiplyScalar(viewDistance));
+  camera.up.copy(up);
+  controls.target.copy(glenoidCenter);
+  controls.update();
+}
+
+document.getElementById('view-glenoid').addEventListener('click', () => setView('glenoid'));
+document.getElementById('view-anterior').addEventListener('click', () => setView('anterior'));
+document.getElementById('view-lateral').addEventListener('click', () => setView('lateral'));
+document.getElementById('view-superior').addEventListener('click', () => setView('superior'));
+
+// ──────────────────────────────────────────────────────────────────────
+// Display toggles
+// ──────────────────────────────────────────────────────────────────────
+document.getElementById('toggle-kwire').addEventListener('change', updateKwireVisualization);
+document.getElementById('toggle-plane').addEventListener('change', updateContactPlane);
+document.getElementById('toggle-skeleton').addEventListener('change', updateSkeleton);
+document.getElementById('toggle-scapula').addEventListener('change', e => {
+  if (scapulaMesh) scapulaMesh.visible = e.target.checked;
+});
+
+document.getElementById('btn-reset-legs').addEventListener('click', () => {
+  state.legs = autoPlaceLegs();
+  createLegSpheres();
+  saveState();
+  if (document.getElementById('toggle-skeleton').checked) updateSkeleton();
+});
+
+// Patient ID input: live update + persist
+const patientIdInput = document.getElementById('patient-id-input');
+if (patientIdInput) {
+  patientIdInput.addEventListener('input', e => {
+    state.patientId = (e.target.value || '').slice(0, 10);
+    saveState();
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// PSI GENERATION (Phase B) — three-bvh-csg pipeline
+// ──────────────────────────────────────────────────────────────────────
+// Parameters (single source of truth — used by both skeleton preview and CSG)
+const PSI = {
+  FOOT_DIAMETER: 10,
+  FOOT_HEIGHT: 6,
+  FOOT_EMBED: 3,
+  CENTRAL_DIAMETER: 10,
+  CENTRAL_HEIGHT: 20,
+  CENTRAL_OFFSET_FROM_BONE: 3,
+  LEG_DIAMETER: 6,
+  LEG_DIRECTION: 'free',
+  FILLET_DIAMETER: 8,      // sphere at foot↔leg junction (must be ≥ LEG_DIAMETER for smooth blend)
+  KWIRE_DIAMETER: 2.5,
+  KWIRE_LENGTH: 200,
+  BONE_OFFSET: 0.0,   // was 0.5 — offsetting along normals creates self-intersections
+                       // in concave regions (glenoid cavity), breaking manifold subtraction.
+                       // 0 = press-fit; add print clearance in the slicer or via radial inflate.
+  CYL_SEGMENTS: 96,          // radial segments — was 64. higher = better CSG with detailed scapula
+  CYL_HEIGHT_SEGMENTS: 12,   // longitudinal segments along cylinder axis (NEW)
+  CYL_CAP_RINGS: 6,          // concentric rings on each cap to subdivide (NEW)
+  SPHERE_SEGMENTS: 48,       // was 32
+  MERGE_TOLERANCE: 1e-2,         // mm — was 1e-4, too tight to fix T-junctions
+  SCAPULA_MERGE_TOLERANCE: 1e-3, // mm — pre-clean scapula's marching-cubes duplicates
+  DEGENERATE_AREA: 1e-6,         // mm² — triangles smaller than this are removed
+  SKIP_BONE_SUBTRACT: false,     // debug toggle — true skips scapula subtraction
+};
+
+// Computed once after scapula loads.
+let kwireBoneEntry = null;   // THREE.Vector3 where K_axis pierces the glenoid surface
+
+function computeKwireBoneEntry() {
+  // Cast K_axis from far outside toward the scapula; first hit = articular surface entry.
+  // Starts from kwireOrigin (= glenoidCenter when no implant adjustment, otherwise
+  // offset by tx/ty/depth) so the entry point matches the planned implant peg.
+  if (!scapulaMesh) return null;
+  const K = friedmanAxis.clone().normalize();
+  const ray = new THREE.Raycaster();
+  // Start 200mm outside, ray pointing inward
+  const origin = kwireOrigin.clone().add(K.clone().multiplyScalar(200));
+  ray.set(origin, K.clone().negate());
+  ray.far = 500;
+  scapulaMesh.updateMatrixWorld(true);
+  const hits = ray.intersectObject(scapulaMesh, true);
+  if (hits.length === 0) {
+    console.warn('[PSI] K_axis did not hit scapula — using kwireOrigin as fallback');
+    return kwireOrigin.clone();
+  }
+  console.log('[PSI] K-wire bone entry:', hits[0].point.toArray().map(v => v.toFixed(2)));
+  return hits[0].point.clone();
+}
+
+// Unified geometry computation — used by skeleton preview AND CSG.
+// Returns null if legs not all placed.
+function computePSIGeometry() {
+  const [P1, P2, P3] = state.legs;
+  if (!P1 || !P2 || !P3) return null;
+  if (!kwireBoneEntry) return null;
+
+  const K = friedmanAxis.clone().normalize();
+
+  // Contact plane (informational — for the disc visualization)
+  const v1 = new THREE.Vector3().subVectors(P2, P1);
+  const v2 = new THREE.Vector3().subVectors(P3, P1);
+  let nplane = new THREE.Vector3().crossVectors(v1, v2).normalize();
+  if (nplane.dot(K) < 0) nplane.negate();
+  const planeCentroid = new THREE.Vector3().addVectors(P1, P2).add(P3).divideScalar(3);
+
+  // Central cylinder — anchored to K-wire bone entry (NOT contact plane)
+  const centralBase = kwireBoneEntry.clone().add(K.clone().multiplyScalar(PSI.CENTRAL_OFFSET_FROM_BONE));
+  const centralCenter = centralBase.clone().add(K.clone().multiplyScalar(PSI.CENTRAL_HEIGHT / 2));
+  const centralTop = centralBase.clone().add(K.clone().multiplyScalar(PSI.CENTRAL_HEIGHT));
+
+  // Feet — cylinders along K_axis, smaller height + smaller embed
+  const feet = state.legs.map(P => {
+    const footTop = P.clone().add(K.clone().multiplyScalar(PSI.FOOT_HEIGHT - PSI.FOOT_EMBED));
+    const footBase = P.clone().sub(K.clone().multiplyScalar(PSI.FOOT_EMBED));
+    const footCenter = new THREE.Vector3().addVectors(footTop, footBase).multiplyScalar(0.5);
+    return { contactPoint: P, footTop, footBase, footCenter };
+  });
+
+  // Legs — free direction: footTop → centralCenter
+  // The leg ends INSIDE the central cylinder, so boolean union absorbs it cleanly.
+  const legs = feet.map(f => {
+    const dir = centralCenter.clone().sub(f.footTop);
+    const len = dir.length();
+    if (len < 0.01) return null;
+    dir.normalize();
+    const legCenter = f.footTop.clone().add(dir.clone().multiplyScalar(len / 2));
+    return { dir, length: len, center: legCenter, start: f.footTop.clone(), end: centralCenter.clone() };
+  });
+
+  return {
+    K,
+    planeNormal: nplane, planeCentroid,
+    centralBase, centralCenter, centralTop,
+    feet, legs,
+  };
+}
+
+let psiMesh = null;
+let psiGeneratedSTL = null;  // ArrayBuffer for download
+
+// Helper: build a cylinder Brush oriented along an arbitrary axis.
+// `axis` must be normalized. `center` is the midpoint of the cylinder.
+function makeCylinderBrush({ radius, height, axis, center, segments = PSI.CYL_SEGMENTS }) {
+  const geom = new THREE.CylinderGeometry(radius, radius, height, segments);
+  const brush = new Brush(geom);
+  // CylinderGeometry default axis is +Y. Rotate Y → axis.
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+  brush.quaternion.copy(q);
+  brush.position.copy(center);
+  brush.updateMatrixWorld();
+  return brush;
+}
+
+function makeSphereBrush({ radius, center, segments = PSI.SPHERE_SEGMENTS }) {
+  const geom = new THREE.SphereGeometry(radius, segments, Math.max(8, segments / 2));
+  const brush = new Brush(geom);
+  brush.position.copy(center);
+  brush.updateMatrixWorld();
+  return brush;
+}
+
+// ─── Post-processing: clean up mesh after CSG ───
+// CSG output is typically non-indexed with duplicate vertices at boundaries.
+// This causes MeshMixer / slicers to see "open" edges. Three-step cleanup:
+//   1. mergeVertices — welds duplicates within tolerance
+//   2. remove degenerate triangles — kills zero-area slivers
+//   3. computeVertexNormals — fresh smooth shading
+function cleanCSGGeometry(rawGeom) {
+  const stats = {
+    rawTriangles: rawGeom.attributes.position.count / 3,
+    rawVertices: rawGeom.attributes.position.count,
+  };
+
+  // 1. Merge duplicate vertices (welds boundary edges)
+  let geom = mergeVertices(rawGeom, PSI.MERGE_TOLERANCE);
+  stats.mergedVertices = geom.attributes.position.count;
+
+  // 2. Filter degenerate triangles
+  const pos = geom.attributes.position;
+  const idx = geom.index;
+  if (idx) {
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    const ab = new THREE.Vector3(), ac = new THREE.Vector3(), cr = new THREE.Vector3();
+    const kept = [];
+    for (let i = 0; i < idx.count; i += 3) {
+      const ia = idx.getX(i), ib = idx.getX(i + 1), ic = idx.getX(i + 2);
+      a.fromBufferAttribute(pos, ia);
+      b.fromBufferAttribute(pos, ib);
+      c.fromBufferAttribute(pos, ic);
+      ab.subVectors(b, a);
+      ac.subVectors(c, a);
+      cr.crossVectors(ab, ac);
+      const area2 = cr.lengthSq();
+      if (area2 > PSI.DEGENERATE_AREA * PSI.DEGENERATE_AREA * 4) {
+        kept.push(ia, ib, ic);
+      }
+    }
+    geom.setIndex(kept);
+    stats.cleanedTriangles = kept.length / 3;
+  }
+
+  // 3. Recompute normals
+  geom.computeVertexNormals();
+
+  // 4. Manifold sanity check — count edges that appear in only 1 triangle (open edges)
+  if (geom.index) {
+    const edgeCounts = new Map();
+    const idx2 = geom.index;
+    for (let i = 0; i < idx2.count; i += 3) {
+      const a = idx2.getX(i), b = idx2.getX(i + 1), c = idx2.getX(i + 2);
+      for (const [u, v] of [[a, b], [b, c], [c, a]]) {
+        const k = u < v ? `${u}_${v}` : `${v}_${u}`;
+        edgeCounts.set(k, (edgeCounts.get(k) || 0) + 1);
+      }
+    }
+    let openEdges = 0, nonManifoldEdges = 0;
+    for (const cnt of edgeCounts.values()) {
+      if (cnt === 1) openEdges++;
+      else if (cnt > 2) nonManifoldEdges++;
+    }
+    stats.openEdges = openEdges;
+    stats.nonManifoldEdges = nonManifoldEdges;
+    stats.totalEdges = edgeCounts.size;
+  }
+
+  return { geometry: geom, stats };
+}
+
+// Take the scapula's surface geometry, bake the Group's matrixWorld into the vertices,
+// pre-clean it (marching cubes output has many duplicate vertices),
+// and return a Brush ready for boolean ops. Optionally expand outward by `offset` mm.
+let _scapulaBrushCache = null;     // cached cleaned scapula brush (without offset)
+let _scapulaPreCleanStats = null;
+
+function makeScapulaBrush(offset = 0) {
+  if (!scapulaSurfaceMesh) throw new Error('Scapula surface mesh not loaded');
+  scapulaMesh.updateMatrixWorld(true);
+
+  // 1. Clone and bake world transform into vertices
+  let geom = scapulaSurfaceMesh.geometry.clone();
+  geom.applyMatrix4(scapulaSurfaceMesh.matrixWorld);
+
+  // 2. Pre-clean: weld duplicate vertices from marching cubes
+  //    Cache the result so repeated regenerations don't redo this expensive step.
+  if (!_scapulaBrushCache) {
+    const rawTris = geom.attributes.position.count / (geom.index ? 1 : 3);
+    const cleaned = mergeVertices(geom, PSI.SCAPULA_MERGE_TOLERANCE);
+    cleaned.computeVertexNormals();
+
+    // Count open edges before vs after
+    const countOpen = (g) => {
+      if (!g.index) return -1;
+      const edgeCounts = new Map();
+      const idx = g.index;
+      for (let i = 0; i < idx.count; i += 3) {
+        const a = idx.getX(i), b = idx.getX(i + 1), c = idx.getX(i + 2);
+        for (const [u, v] of [[a, b], [b, c], [c, a]]) {
+          const k = u < v ? `${u}_${v}` : `${v}_${u}`;
+          edgeCounts.set(k, (edgeCounts.get(k) || 0) + 1);
+        }
+      }
+      let open = 0;
+      for (const cnt of edgeCounts.values()) if (cnt === 1) open++;
+      return open;
+    };
+    _scapulaPreCleanStats = {
+      rawTriangles: Math.round(rawTris),
+      mergedVertices: cleaned.attributes.position.count,
+      openEdgesAfterMerge: countOpen(cleaned),
+    };
+    console.log('[PSI] Scapula pre-clean:', _scapulaPreCleanStats);
+    _scapulaBrushCache = cleaned;
+  }
+
+  // 3. Use cached cleaned geometry (clone before offset so cache stays pristine)
+  geom = _scapulaBrushCache.clone();
+
+  // 4. Optional outward offset along normals (for printing clearance)
+  if (offset !== 0) {
+    if (!geom.attributes.normal) geom.computeVertexNormals();
+    const pos = geom.attributes.position;
+    const nor = geom.attributes.normal;
+    for (let i = 0; i < pos.count; i++) {
+      pos.setXYZ(i,
+        pos.getX(i) + nor.getX(i) * offset,
+        pos.getY(i) + nor.getY(i) * offset,
+        pos.getZ(i) + nor.getZ(i) * offset
+      );
+    }
+    pos.needsUpdate = true;
+  }
+
+  const brush = new Brush(geom);
+  brush.updateMatrixWorld();
+  return brush;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// manifold-3d (WASM) — guaranteed manifold output, replaces three-bvh-csg
+// ──────────────────────────────────────────────────────────────────────
+let manifoldEngine = null;
+let _scapulaManifoldCache = null;
+
+async function initManifoldEngine() {
+  if (manifoldEngine) return manifoldEngine;
+  console.log('[PSI] Loading manifold-3d WASM…');
+  const wasm = await ManifoldModule();
+  wasm.setup();
+  manifoldEngine = wasm;
+  console.log('[PSI] manifold-3d ready');
+  // Version marker — bump when manifoldCylinder/dumpBbox change so we know
+  // the browser loaded fresh code (Cmd+Shift+R).
+  console.log('%c[PSI] code build: v12 (K-wire follows tx/ty/depth, not just retro/incl)', 'color:#5fd96e;font-weight:bold');
+  return wasm;
+}
+
+// Convert a THREE.BufferGeometry (indexed or not) into a manifold-3d Manifold.
+// The input MUST be welded — we run mergeVertices first.
+//
+// CRITICAL: mergeVertices from BufferGeometryUtils welds only when ALL attributes
+// match (position + normal + uv). THREE.CylinderGeometry has different normals
+// at the rim (radial on side, axial on cap), so naive mergeVertices leaves a
+// non-manifold seam. Strip everything but position before welding.
+function geomToManifold(geom, mergeTol = 1e-3) {
+  if (!manifoldEngine) throw new Error('Manifold engine not ready');
+  // Strip non-position attributes so mergeVertices welds by position only
+  const stripped = new THREE.BufferGeometry();
+  stripped.setAttribute('position', geom.attributes.position);
+  if (geom.index) stripped.setIndex(geom.index);
+  // Ensure indexed + welded
+  const welded = mergeVertices(stripped, mergeTol);
+  if (!welded.index) {
+    // Build sequential index if mergeVertices didn't add one
+    const n = welded.attributes.position.count;
+    const idx = new Uint32Array(n);
+    for (let i = 0; i < n; i++) idx[i] = i;
+    welded.setIndex(new THREE.BufferAttribute(idx, 1));
+  }
+  const positions = welded.attributes.position.array;
+  const indices = welded.index.array;
+  // manifold expects Float32Array + Uint32Array
+  const vertProperties = (positions instanceof Float32Array) ? positions : new Float32Array(positions);
+  const triVerts = (indices instanceof Uint32Array) ? indices : new Uint32Array(indices);
+  const mesh = new manifoldEngine.Mesh({
+    numProp: 3,
+    vertProperties,
+    triVerts,
+  });
+  return new manifoldEngine.Manifold(mesh);
+}
+
+function manifoldToGeom(m) {
+  const mesh = m.getMesh();
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(mesh.vertProperties, mesh.numProp));
+  geom.setIndex(new THREE.BufferAttribute(mesh.triVerts, 1));
+  geom.computeVertexNormals();
+  return geom;
+}
+
+// Build a cylinder Manifold oriented along an arbitrary axis.
+//
+// HISTORY of attempts:
+//   1. `.rotate([deg,deg,deg])` from Euler XYZ — broken (Tait-Bryan order mismatch)
+//   2. `.transform(mat3x4)` from Matrix4 — silently ignores translation in v2.5.1
+//
+// CURRENT APPROACH: build the cylinder in THREE.js with the world transform
+// already baked into the vertex positions, then convert to Manifold via
+// geomToManifold(). This sidesteps manifold-3d's rotation/transform API
+// entirely — we only use it for primitive creation + boolean ops, which
+// are well-tested. Translation via `.translate([x,y,z])` works fine (fillets
+// using it appear in the right places).
+function manifoldCylinder({ radius, height, axis, center, segments = PSI.CYL_SEGMENTS, heightSegments = PSI.CYL_HEIGHT_SEGMENTS }) {
+  // Build a THREE.js cylinder with the right radius/height (default axis = +Y).
+  // heightSegments > 1 adds longitudinal rings — needed so CSG with detailed
+  // scapula (avg edge ~0.6mm) doesn't fail from triangle size mismatch.
+  const geom = new THREE.CylinderGeometry(radius, radius, height, segments, heightSegments, false);
+  // Rotate +Y → axis, translate to center, bake into vertices
+  const axisN = axis.clone().normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axisN);
+  const mat4 = new THREE.Matrix4().compose(center, q, new THREE.Vector3(1, 1, 1));
+  geom.applyMatrix4(mat4);
+  // Convert to Manifold (geomToManifold runs mergeVertices internally for indexing)
+  return geomToManifold(geom, 1e-4);
+}
+
+// ──── PATIENT ID TEXT (embossed on central cylinder, upper part, along K) ────
+const PSI_TEXT = {
+  CHAR_HEIGHT: 1.8,        // mm — char size (TextGeometry "size")
+  EMBOSS_DEPTH: 1.2,       // mm — total extrusion (sinks 0.4mm into cylinder, protrudes 0.8mm)
+  EMBOSS_OVERLAP: 0.4,     // mm — how much the text base sinks into cylinder
+  UPPER_RATIO: 0.65,       // vertical position on central (0.5 = middle, 1.0 = top)
+  CURVE_BIAS: false,       // future: wrap text around cylinder (currently flat tangent)
+};
+
+let _fontCache = null;
+async function loadPSIFont() {
+  if (_fontCache) return _fontCache;
+  return new Promise((resolve, reject) => {
+    new FontLoader().load(
+      'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json',
+      f => { _fontCache = f; console.log('[PSI/Text] font loaded'); resolve(f); },
+      undefined,
+      err => { console.warn('[PSI/Text] font load failed:', err); reject(err); }
+    );
+  });
+}
+
+// Build a Manifold of the patient ID text positioned on the central cylinder surface.
+// Returns null if no text, font missing, or any error (graceful degradation).
+async function buildPatientIDTextManifold(g) {
+  const raw = (state.patientId || '').trim().slice(0, 10);
+  if (!raw) return null;
+  let font;
+  try { font = await loadPSIFont(); }
+  catch { return null; }
+
+  let textGeom;
+  try {
+    textGeom = new TextGeometry(raw, {
+      font,
+      size: PSI_TEXT.CHAR_HEIGHT,
+      height: PSI_TEXT.EMBOSS_DEPTH,
+      curveSegments: 4,
+      bevelEnabled: false,
+    });
+  } catch (err) {
+    console.warn('[PSI/Text] TextGeometry failed:', err);
+    return null;
+  }
+
+  // TextGeometry layout: chars read along +X, height along +Y (baseline at 0),
+  // extrusion +Z. We want: read along K, char-up along tangent, extrusion radial-out.
+  textGeom.computeBoundingBox();
+  const bb = textGeom.boundingBox;
+  const textWidth  = bb.max.x - bb.min.x;
+  const textHeight = bb.max.y - bb.min.y;
+  if (textWidth > PSI.CENTRAL_HEIGHT - 2) {
+    console.warn(`[PSI/Text] "${raw}" is ${textWidth.toFixed(1)}mm long, exceeds usable ${(PSI.CENTRAL_HEIGHT-2).toFixed(1)}mm. Will overflow cylinder ends.`);
+  }
+
+  // Center text geometry at origin: X centered, Y baseline at 0 (so chars sit ABOVE),
+  // Z extrusion goes from 0 to +depth (we'll position so 0 is at cylinder surface).
+  textGeom.translate(-(bb.max.x + bb.min.x) / 2, -bb.min.y - textHeight / 2, 0);
+
+  // Build orientation basis:
+  //   readDir (text +X) → K (along cylinder axis)
+  //   upDir   (text +Y) → tangent (around cylinder, perpendicular to radial)
+  //   outDir  (text +Z) → radial outward
+  const K = g.K.clone().normalize();
+  // Outward radial direction: project glenoidRight onto plane perpendicular to K
+  let outDir = glenoidRight.clone();
+  outDir.addScaledVector(K, -outDir.dot(K)).normalize();
+  if (outDir.lengthSq() < 0.01) {
+    // glenoidRight was parallel to K (shouldn't happen) — pick any perpendicular
+    outDir.set(1, 0, 0);
+    outDir.addScaledVector(K, -outDir.dot(K)).normalize();
+  }
+  // upDir = K × outDir (right-handed)
+  const upDir = new THREE.Vector3().crossVectors(K, outDir).normalize();
+
+  // Rotation matrix: columns = [K, upDir, outDir] map (+X, +Y, +Z) text axes
+  const rot = new THREE.Matrix4().makeBasis(K, upDir, outDir);
+
+  // Position: on central cylinder surface, at UPPER_RATIO along cylinder axis.
+  // centralBase is the bottom face center, centralCenter is the midpoint.
+  const surfaceCenter = g.centralBase.clone().add(
+    K.clone().multiplyScalar(PSI.CENTRAL_HEIGHT * PSI_TEXT.UPPER_RATIO)
+  );
+  // Push outward by cylinder radius minus emboss overlap (text base sinks slightly into cylinder)
+  const surfacePos = surfaceCenter.clone().add(
+    outDir.clone().multiplyScalar(PSI.CENTRAL_DIAMETER / 2 - PSI_TEXT.EMBOSS_OVERLAP)
+  );
+
+  // Compose full transform: rotate, then translate to surface position
+  const m = new THREE.Matrix4().makeTranslation(surfacePos.x, surfacePos.y, surfacePos.z)
+    .multiply(rot);
+  textGeom.applyMatrix4(m);
+
+  console.log(`[PSI/Text] "${raw}" — width=${textWidth.toFixed(1)}mm at upper ${(PSI_TEXT.UPPER_RATIO*100).toFixed(0)}%`);
+
+  // Convert to Manifold. TextGeometry can have self-intersecting char outlines on
+  // some fonts; weld aggressively and accept failure gracefully.
+  try {
+    return geomToManifold(textGeom, 1e-3);
+  } catch (err) {
+    console.warn('[PSI/Text] manifold conversion failed:', err.message || err);
+    return null;
+  }
+}
+
+function manifoldSphereAt({ radius, center, segments = PSI.SPHERE_SEGMENTS }) {
+  const M = manifoldEngine.Manifold;
+  let m = M.sphere(radius, segments);
+  m = m.translate([center.x, center.y, center.z]);
+  return m;
+}
+
+// Build scapula Manifold. Marching-cubes OBJs have many near-duplicate vertices
+// that need aggressive welding to satisfy manifold-3d's strict 2-manifold requirement.
+async function getScapulaManifold(offset = 0) {
+  if (!scapulaSurfaceMesh) throw new Error('No scapula');
+  scapulaMesh.updateMatrixWorld(true);
+  let geom = scapulaSurfaceMesh.geometry.clone();
+  geom.applyMatrix4(scapulaSurfaceMesh.matrixWorld);
+
+  // Try progressively coarser merge tolerances until we get below the manifold ratio.
+  // For a 2-manifold mesh: V/T ≈ 0.5. Marching-cubes raw is V/T ≈ 3 (non-indexed).
+  // We want V/T < 0.7 to have a chance of being manifold.
+  const triCount = geom.index ? geom.index.count / 3 : geom.attributes.position.count / 3;
+  const targetMaxVerts = triCount * 0.7;
+  const tolerances = [0.05, 0.1, 0.2, 0.5];
+  let welded = geom;
+  let usedTol = 0;
+  for (const tol of tolerances) {
+    welded = mergeVertices(geom, tol);
+    const v = welded.attributes.position.count;
+    console.log(`[PSI/Manifold] Scapula merge tol=${tol}mm → ${v} vertices (target <${Math.round(targetMaxVerts)})`);
+    usedTol = tol;
+    if (v <= targetMaxVerts) break;
+  }
+
+  if (offset !== 0) {
+    welded.computeVertexNormals();
+    const pos = welded.attributes.position;
+    const nor = welded.attributes.normal;
+    for (let i = 0; i < pos.count; i++) {
+      pos.setXYZ(i,
+        pos.getX(i) + nor.getX(i) * offset,
+        pos.getY(i) + nor.getY(i) * offset,
+        pos.getZ(i) + nor.getZ(i) * offset
+      );
+    }
+    pos.needsUpdate = true;
+  }
+  return geomToManifold(welded, usedTol);
+}
+
+async function generatePSIManifold() {
+  await initManifoldEngine();
+  console.log('%c[PSI] generatePSIManifold v11 (K-axis = adjusted Friedman)', 'color:#ffb84d;font-weight:bold');
+  const g = computePSIGeometry();
+  if (!g) throw new Error('All 3 leg positions required');
+
+  // Helper: print Manifold bbox (sanity check per primitive before union).
+  // CRITICAL: must respect mesh.numProp — if manifold returns extra attributes
+  // (normals, tangents) numProp may be 6 or 7, and stepping by 3 reads garbage.
+  const dumpBbox = (label, m) => {
+    const mesh = m.getMesh();
+    const v = mesh.vertProperties;
+    const np = mesh.numProp || 3;
+    let minX = Infinity, minY = Infinity, minZ = Infinity, maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    const nVerts = (v.length / np) | 0;
+    for (let i = 0; i < nVerts; i++) {
+      const x = v[i * np], y = v[i * np + 1], z = v[i * np + 2];
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+    const sz = `${(maxX-minX).toFixed(1)}×${(maxY-minY).toFixed(1)}×${(maxZ-minZ).toFixed(1)}`;
+    const c = `${((minX+maxX)/2).toFixed(1)},${((minY+maxY)/2).toFixed(1)},${((minZ+maxZ)/2).toFixed(1)}`;
+    console.log(`[PSI/DEBUG] ${label.padEnd(10)} bbox size=${sz}  center=${c}  (${nVerts} verts, numProp=${np})`);
+  };
+
+  // Log inputs
+  console.log('[PSI/DEBUG] g.K=', g.K.toArray().map(x=>x.toFixed(3)).join(','));
+  console.log('[PSI/DEBUG] g.centralCenter=', g.centralCenter.toArray().map(x=>x.toFixed(2)).join(','));
+  g.feet.forEach((f, i) => console.log(`[PSI/DEBUG] foot[${i}] center=`, f.footCenter.toArray().map(x=>x.toFixed(2)).join(',')));
+  g.legs.forEach((l, i) => l && console.log(`[PSI/DEBUG] leg[${i}] length=${l.length.toFixed(2)} center=`, l.center.toArray().map(x=>x.toFixed(2)).join(','), 'dir=', l.dir.toArray().map(x=>x.toFixed(3)).join(',')));
+
+  // 1. Build all primitive parts (with bbox sanity dumps)
+  const central = manifoldCylinder({
+    radius: PSI.CENTRAL_DIAMETER / 2, height: PSI.CENTRAL_HEIGHT,
+    axis: g.K, center: g.centralCenter,
+  });
+  dumpBbox('central', central);
+  const feet = g.feet.map((f, i) => {
+    const m = manifoldCylinder({
+      radius: PSI.FOOT_DIAMETER / 2, height: PSI.FOOT_HEIGHT,
+      axis: g.K, center: f.footCenter,
+    });
+    dumpBbox(`foot[${i}]`, m);
+    return m;
+  });
+  const legs = g.legs.filter(Boolean).map((leg, i) => {
+    const m = manifoldCylinder({
+      radius: PSI.LEG_DIAMETER / 2, height: leg.length,
+      axis: leg.dir, center: leg.center,
+    });
+    dumpBbox(`leg[${i}]`, m);
+    return m;
+  });
+  const fillets = g.feet.map((f, i) => {
+    const m = manifoldSphereAt({
+      radius: PSI.FILLET_DIAMETER / 2, center: f.footTop,
+    });
+    dumpBbox(`fillet[${i}]`, m);
+    return m;
+  });
+
+  // 1b. Build patient ID text (embossed on central cylinder upper portion).
+  //     Returned manifold may be null (no ID set, or text-to-manifold conversion failed).
+  let textManifold = null;
+  try {
+    textManifold = await buildPatientIDTextManifold(g);
+    if (textManifold) {
+      dumpBbox('textID', textManifold);
+      console.log('[PSI/Manifold] ✓ Patient ID text manifold ready');
+    }
+  } catch (err) {
+    console.warn('[PSI/Manifold] Patient ID text build failed:', err.message || err);
+  }
+
+  // 2. Union (batchBoolean is much faster + more accurate than chained .add)
+  const partCount = 1 + feet.length + legs.length + fillets.length + (textManifold ? 1 : 0);
+  console.log('[PSI/Manifold] Step 1/3: batch union of', partCount, 'parts' + (textManifold ? ' (incl. patient ID text)' : ''));
+  const allParts = [central, ...feet, ...legs, ...fillets];
+  if (textManifold) allParts.push(textManifold);
+  const M = manifoldEngine.Manifold;
+  let psi;
+  if (typeof M.batchBoolean === 'function') {
+    psi = M.batchBoolean(allParts, 'add');
+  } else if (typeof M.union === 'function' && M.union.length >= 2) {
+    // Static union(a, b) — chain pairwise.
+    psi = allParts[0];
+    for (let i = 1; i < allParts.length; i++) psi = M.union(psi, allParts[i]);
+  } else {
+    // Instance method fallback (.add)
+    psi = allParts[0];
+    for (let i = 1; i < allParts.length; i++) psi = psi.add(allParts[i]);
+  }
+  console.log('[PSI/Manifold] Union complete — triangles:', psi.numTri ? psi.numTri() : '?');
+
+  // Helper: decode manifold-3d errors — WASM may throw a bare pointer instead of an Error.
+  const decodeErr = (err) => {
+    if (err && typeof err === 'object' && err.message) return err.message;
+    if (typeof err === 'number') {
+      try {
+        const m = manifoldEngine.getExceptionMessage && manifoldEngine.getExceptionMessage(err);
+        if (m) return `wasm: ${m}`;
+      } catch {}
+      return `wasm exception ptr=${err} (likely self-intersection or topology violation)`;
+    }
+    return String(err);
+  };
+
+  // ──── REORDERED: K-wire FIRST (simple, robust), bone subtraction LAST.
+  // Rationale: K-wire is a thin cylinder (Ø2.5). When the bone subtraction is
+  // done first, the result has highly-detailed bone-conformal concavities.
+  // The K-wire (with many segments) cutting through that detailed surface
+  // creates tiny sliver intersections that crash manifold-3d during status()/
+  // getMesh() (lazy-eval validation catches the invariant violation).
+  // Doing K-wire on the clean union (before bone detail is added) is robust.
+
+  // 3. Subtract K-wire FIRST — use LOW segments (16) since it's thin and doesn't
+  // need radial detail. 16 segs on Ø2.5 = ~0.5mm edge length, matches bone resolution.
+  console.log('[PSI/Manifold] Step 2/3: Subtract K-wire (Ø' + PSI.KWIRE_DIAMETER + ' mm, 16 segs) through kwireOrigin', kwireOrigin.toArray().map(v=>v.toFixed(2)));
+  try {
+    const kwire = manifoldCylinder({
+      radius: PSI.KWIRE_DIAMETER / 2, height: PSI.KWIRE_LENGTH,
+      axis: g.K, center: kwireOrigin,
+      segments: 16, heightSegments: 24,  // coarse radial, fine longitudinal
+    });
+    const newPsi = psi.subtract(kwire);
+    psi.delete();
+    psi = newPsi;
+    kwire.delete();
+    console.log('[PSI/Manifold] ✓ K-wire subtraction OK');
+  } catch (err) {
+    const msg = decodeErr(err);
+    console.warn('[PSI/Manifold] ✗ K-wire subtraction failed:', msg);
+    console.warn('[PSI/Manifold] Keeping the body without K-wire hole — drill manually.');
+  }
+
+  // 4. Subtract scapula LAST — the heavy operation.
+  const skipBone = PSI.SKIP_BONE_SUBTRACT || document.getElementById('toggle-skip-bone')?.checked;
+  let boneSkippedReason = null;
+  let finalPsi = psi;
+  if (skipBone) {
+    boneSkippedReason = 'user toggle';
+    console.log('[PSI/Manifold] Step 3/3: SKIPPED (debug)');
+  } else {
+    console.log('[PSI/Manifold] Step 3/3: Subtract scapula (offset =', PSI.BONE_OFFSET, 'mm)');
+    try {
+      const scapulaM = await getScapulaManifold(PSI.BONE_OFFSET);
+      const newPsi = psi.subtract(scapulaM);
+      psi.delete();
+      finalPsi = newPsi;
+      scapulaM.delete();
+      console.log('[PSI/Manifold] ✓ Bone subtraction OK');
+    } catch (err) {
+      const msg = decodeErr(err);
+      console.warn('[PSI/Manifold] ✗ Scapula subtraction failed:', msg);
+      console.warn('[PSI/Manifold] Continuing without bone conformity — flat foot cylinders.');
+      boneSkippedReason = msg;
+      finalPsi = psi; // keep the body with K-wire hole
+    }
+  }
+
+  // 5. Inspect status (0 = OK) — fine-grained try/catch
+  let status = null;
+  try {
+    status = finalPsi.status();
+    console.log('[PSI/Manifold] ✓ status() OK, code =', status);
+  } catch (err) {
+    console.warn('[PSI/Manifold] ✗ status() threw:', decodeErr(err));
+  }
+  if (status && typeof status === 'object' && status.value !== 0) {
+    console.warn('[PSI/Manifold] status code', status.value, '— non-zero indicates topology issue');
+  }
+
+  // 6. Convert to THREE geometry — wrap to catch getMesh errors
+  let geom;
+  try {
+    geom = manifoldToGeom(finalPsi);
+    console.log('[PSI/Manifold] ✓ getMesh() OK — Triangles:', geom.index ? geom.index.count / 3 : geom.attributes.position.count / 3);
+  } catch (err) {
+    console.error('[PSI/Manifold] ✗ getMesh() failed:', decodeErr(err));
+    throw new Error('manifoldToGeom failed: ' + decodeErr(err));
+  }
+
+  // 7. Free WASM memory
+  try { finalPsi.delete(); } catch (err) { console.warn('finalPsi.delete:', decodeErr(err)); }
+  for (const p of allParts) try { p.delete(); } catch {}
+
+  // Compute manifold check (should report 0 open edges, 0 non-manifold)
+  const stats = manifoldCheck(geom);
+  console.log('[PSI/Manifold] Verification:', stats);
+
+  // Wrap in Brush-like object so caller stays the same
+  const wrapper = { geometry: geom, _stats: stats, _boneSkippedReason: boneSkippedReason };
+  return wrapper;
+}
+
+function manifoldCheck(geom) {
+  const stats = {
+    triangles: geom.index ? geom.index.count / 3 : geom.attributes.position.count / 3,
+    vertices: geom.attributes.position.count,
+  };
+  if (!geom.index) { stats.openEdges = -1; return stats; }
+  const idx = geom.index;
+  const edgeCounts = new Map();
+  for (let i = 0; i < idx.count; i += 3) {
+    const a = idx.getX(i), b = idx.getX(i + 1), c = idx.getX(i + 2);
+    for (const [u, v] of [[a, b], [b, c], [c, a]]) {
+      const k = u < v ? `${u}_${v}` : `${v}_${u}`;
+      edgeCounts.set(k, (edgeCounts.get(k) || 0) + 1);
+    }
+  }
+  let open = 0, nonManifold = 0;
+  for (const cnt of edgeCounts.values()) {
+    if (cnt === 1) open++;
+    else if (cnt > 2) nonManifold++;
+  }
+  stats.openEdges = open;
+  stats.nonManifoldEdges = nonManifold;
+  stats.totalEdges = edgeCounts.size;
+  return stats;
+}
+
+async function generatePSI() {
+  if (!scapulaSurfaceMesh) throw new Error('Scapula not loaded');
+  const g = computePSIGeometry();
+  if (!g) throw new Error('All 3 leg positions required');
+
+  const evaluator = new Evaluator();
+  evaluator.useGroups = false;
+  evaluator.attributes = ['position', 'normal'];
+
+  // 1. Build all brush parts (central + feet + legs + fillet spheres)
+  const central = makeCylinderBrush({
+    radius: PSI.CENTRAL_DIAMETER / 2,
+    height: PSI.CENTRAL_HEIGHT,
+    axis: g.K, center: g.centralCenter,
+  });
+
+  const feet = g.feet.map(f => makeCylinderBrush({
+    radius: PSI.FOOT_DIAMETER / 2,
+    height: PSI.FOOT_HEIGHT,
+    axis: g.K, center: f.footCenter,
+  }));
+
+  const legs = g.legs.map(leg => {
+    if (!leg) return null;
+    return makeCylinderBrush({
+      radius: PSI.LEG_DIAMETER / 2,
+      height: leg.length,
+      axis: leg.dir, center: leg.center,
+    });
+  }).filter(Boolean);
+
+  // Fillet spheres at each foot↔leg junction (footTop)
+  const fillets = g.feet.map(f => makeSphereBrush({
+    radius: PSI.FILLET_DIAMETER / 2,
+    center: f.footTop,
+  }));
+
+  // 2. UNION all parts
+  const allParts = [...feet, ...legs, ...fillets];
+  console.log('[PSI] Step 1/3: Union of', 1 + allParts.length, 'parts');
+  let psi = central;
+  for (const part of allParts) {
+    psi = evaluator.evaluate(psi, part, ADDITION);
+  }
+
+  // 3. SUBTRACT scapula (expanded by BONE_OFFSET for printing clearance)
+  // DEBUG: skip this step to isolate whether the bone subtraction is the source of non-manifold edges.
+  const skipBone = PSI.SKIP_BONE_SUBTRACT || document.getElementById('toggle-skip-bone')?.checked;
+  if (skipBone) {
+    console.log('[PSI] Step 2/3: SKIPPED (debug — no bone subtraction)');
+  } else {
+    console.log('[PSI] Step 2/3: Subtract scapula (offset = ' + PSI.BONE_OFFSET + ' mm)');
+    const scapulaBrush = makeScapulaBrush(PSI.BONE_OFFSET);
+    psi = evaluator.evaluate(psi, scapulaBrush, SUBTRACTION);
+  }
+
+  // 4. SUBTRACT K-wire cylinder (LAST step) — centered at kwireOrigin (= implant peg position)
+  console.log('[PSI] Step 3/3: Subtract K-wire (Ø' + PSI.KWIRE_DIAMETER + ' mm) through kwireOrigin', kwireOrigin.toArray().map(v=>v.toFixed(2)));
+  const kwireBrush = makeCylinderBrush({
+    radius: PSI.KWIRE_DIAMETER / 2,
+    height: PSI.KWIRE_LENGTH,
+    axis: g.K, center: kwireOrigin,
+  });
+  psi = evaluator.evaluate(psi, kwireBrush, SUBTRACTION);
+
+  // 5. Post-process: weld vertices, remove degenerate triangles, recompute normals
+  console.log('[PSI] Cleanup: merging vertices, removing degenerates, recomputing normals');
+  const { geometry: cleanGeom, stats } = cleanCSGGeometry(psi.geometry);
+  console.log('[PSI] Cleanup stats:', stats);
+
+  // Wrap in a Brush so caller treats it like any CSG result
+  const final = new Brush(cleanGeom);
+  final._stats = stats;
+  return final;
+}
+
+function showPSIMesh(brushResult) {
+  // Remove old PSI mesh
+  if (psiMesh) {
+    scene.remove(psiMesh);
+    psiMesh.geometry.dispose();
+    if (Array.isArray(psiMesh.material)) psiMesh.material.forEach(m => m.dispose());
+    else psiMesh.material.dispose();
+    psiMesh = null;
+  }
+  // Show the result as a solid mint-green mesh. OPAQUE so it stands out from
+  // the K-wire viz, scapula, and skeleton overlays.
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x4dd0c8, side: THREE.DoubleSide,
+    transparent: false, opacity: 1.0,
+    shininess: 50,
+    flatShading: false,
+  });
+  psiMesh = new THREE.Mesh(brushResult.geometry, mat);
+  psiMesh.renderOrder = 3;
+  scene.add(psiMesh);
+
+  // Auto-hide noisy overlays so the PSI is clearly visible after generation.
+  // User can re-enable in the DISPLAY panel.
+  const kw = document.getElementById('toggle-kwire');
+  const sc = document.getElementById('toggle-scapula');
+  const sk = document.getElementById('toggle-skeleton');
+  const pl = document.getElementById('toggle-plane');
+  if (kw && kw.checked) { kw.checked = false; updateKwireVisualization(); }
+  if (sc && sc.checked) { sc.checked = false; if (scapulaMesh) scapulaMesh.visible = false; }
+  if (sk && sk.checked) { sk.checked = false; updateSkeleton(); }
+  if (pl && pl.checked) { pl.checked = false; updateContactPlane(); }
+
+  // Auto-zoom camera to the PSI bbox (so it fills the viewport regardless of overlays)
+  const bbox = new THREE.Box3().setFromObject(psiMesh);
+  const center = bbox.getCenter(new THREE.Vector3());
+  const size = bbox.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  console.log('[PSI] Final mesh bbox:',
+    'size=', size.toArray().map(v => v.toFixed(1)).join('×'), 'mm',
+    '| center=', center.toArray().map(v => v.toFixed(1)).join(','));
+  console.log('[PSI] Expected: size ≈ 30-45×30-45×25 mm (tripod ≤35mm wide + central 20mm tall + K-wire hole through it).');
+  console.log('[PSI] If size > 100mm in any axis, something is wrong with the leg geometry.');
+  // Use glenoid view direction (along K_axis) for clearest tripod orientation
+  const viewDir = friedmanAxis.clone().normalize();
+  const dist = maxDim * 2.5;
+  camera.position.copy(center).add(viewDir.multiplyScalar(dist));
+  camera.up.copy(glenoidUp);
+  controls.target.copy(center);
+  controls.update();
+
+  // If "Highlight open edges" is enabled, overlay the open edges as red lines
+  refreshOpenEdgeOverlay();
+}
+
+// Open-edge debug overlay: thin red lines on each edge that appears in only 1 triangle
+let openEdgeOverlay = null;
+function refreshOpenEdgeOverlay() {
+  if (openEdgeOverlay) {
+    scene.remove(openEdgeOverlay);
+    openEdgeOverlay.geometry.dispose();
+    openEdgeOverlay.material.dispose();
+    openEdgeOverlay = null;
+  }
+  const show = document.getElementById('toggle-show-open')?.checked;
+  if (!show || !psiMesh || !psiMesh.geometry.index) return;
+
+  const geom = psiMesh.geometry;
+  const idx = geom.index;
+  const pos = geom.attributes.position;
+  const edgeCounts = new Map();
+  const edgeStore = new Map();   // edgeKey -> [a, b] indices
+
+  for (let i = 0; i < idx.count; i += 3) {
+    const a = idx.getX(i), b = idx.getX(i + 1), c = idx.getX(i + 2);
+    for (const [u, v] of [[a, b], [b, c], [c, a]]) {
+      const k = u < v ? `${u}_${v}` : `${v}_${u}`;
+      edgeCounts.set(k, (edgeCounts.get(k) || 0) + 1);
+      if (!edgeStore.has(k)) edgeStore.set(k, [u, v]);
+    }
+  }
+
+  // Build geometry from open edges only (count === 1)
+  const positions = [];
+  for (const [k, count] of edgeCounts.entries()) {
+    if (count !== 1) continue;
+    const [u, v] = edgeStore.get(k);
+    positions.push(pos.getX(u), pos.getY(u), pos.getZ(u));
+    positions.push(pos.getX(v), pos.getY(v), pos.getZ(v));
+  }
+  if (positions.length === 0) return;
+
+  const lineGeom = new THREE.BufferGeometry();
+  lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0xff3050, depthTest: false, depthWrite: false, transparent: true, opacity: 0.9,
+  });
+  openEdgeOverlay = new THREE.LineSegments(lineGeom, lineMat);
+  openEdgeOverlay.renderOrder = 100;
+  scene.add(openEdgeOverlay);
+  console.log(`[PSI] Open-edge overlay: ${positions.length / 6} line segments`);
+}
+
+// React to toggle changes
+document.getElementById('toggle-show-open')?.addEventListener('change', refreshOpenEdgeOverlay);
+
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-generate');
+  const dlBtn = document.getElementById('btn-download');
+  const hud = document.getElementById('hud');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  hud.innerHTML = '<b>Generating PSI…</b> CSG operations in progress';
+
+  // Hide skeleton/spheres briefly so result is visible
+  document.getElementById('toggle-skeleton').checked = false;
+  updateSkeleton();
+
+  try {
+    const useManifold = document.getElementById('engine-manifold').checked;
+    hud.innerHTML = `<b>Generating PSI…</b> ${useManifold ? 'manifold-3d (WASM)' : 'three-bvh-csg'}`;
+    const t0 = performance.now();
+    const result = useManifold ? await generatePSIManifold() : await generatePSI();
+    const t1 = performance.now();
+    console.log(`[PSI] Total time: ${(t1 - t0).toFixed(0)} ms`);
+    console.log(`[PSI] Triangles: ${result.geometry.index ? result.geometry.index.count / 3 : result.geometry.attributes.position.count / 3}`);
+
+    showPSIMesh(result);
+
+    // Prepare STL for download
+    const exporter = new STLExporter();
+    psiGeneratedSTL = exporter.parse(psiMesh, { binary: true });
+
+    const s = result._stats || {};
+    const triCount = s.cleanedTriangles || (result.geometry.index ? result.geometry.index.count / 3 : result.geometry.attributes.position.count / 3);
+    const manifoldFlag = (s.openEdges === 0 && s.nonManifoldEdges === 0)
+      ? '<span style="color:#5fd96e">manifold ✓</span>'
+      : `<span style="color:#ff5470">${s.openEdges} open · ${s.nonManifoldEdges} non-manifold edges</span>`;
+    const boneSkip = result._boneSkippedReason
+      ? ` · <span style="color:#ffb84d">bone subtract skipped: ${result._boneSkippedReason}</span>`
+      : '';
+
+    hud.innerHTML = `<b>PSI generated</b> · ${(t1 - t0).toFixed(0)}ms · ${triCount.toLocaleString()} triangles · ${manifoldFlag}${boneSkip}`;
+    btn.textContent = 'Regenerate PSI';
+    dlBtn.disabled = false;
+  } catch (err) {
+    console.error('[PSI] Generation failed:', err);
+    hud.innerHTML = `<b style="color:#ff5470">ERROR:</b> ${err.message}`;
+    btn.textContent = 'Generate PSI (failed — see console)';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btn-download').addEventListener('click', () => {
+  if (!psiGeneratedSTL) return;
+  const blob = new Blob([psiGeneratedSTL], { type: 'model/stl' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `scapula_psi_${state.caseId}_${Date.now()}.stl`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Resize handling
+// ──────────────────────────────────────────────────────────────────────
+function resize() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (w === 0 || h === 0) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+// ──────────────────────────────────────────────────────────────────────
+// Animation loop
+// ──────────────────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  try {
+    // 1. Load planning payload — prefer active case from IndexedDB (cross-page persistence
+    //    of an imported planning_package.zip), fallback to local data/planning_payload.json.
+    let payload, sourceLabel = 'demo';
+    let activeCase = null;
+    try { activeCase = await caseStore.loadActiveCase(); } catch (e) { console.warn('[PSI Init] caseStore failed:', e); }
+    if (activeCase && activeCase.payload) {
+      payload = activeCase.payload;
+      sourceLabel = 'imported';
+      console.log('[PSI Init] Using imported case from caseStore:', activeCase.caseId);
+    } else {
+      payload = await fetch('data/planning_payload.json').then(r => {
+        if (!r.ok) throw new Error('No planning_payload.json');
+        return r.json();
+      });
+      console.log('[PSI Init] Using demo case from data/planning_payload.json');
+    }
+    state.planning = parsePipelinePayload(payload);
+    state.caseId = state.planning.caseId;
+    document.getElementById('case-label').textContent =
+      `Case ${state.caseId} · ${state.planning.side === 'L' ? 'Left' : 'Right'} shoulder · ${sourceLabel}`;
+
+    // 2. Load scapula — prefer caseStore (imported zip) → data/scapula_manifold.obj (MeshLab-cleaned, manifold-strict)
+    //    → data/scapula.obj (raw marching cubes).
+    const cacheBust = '?v=' + Date.now();
+    let usedManifoldVariant = false;
+    let scapulaSource = '';
+    if (activeCase && activeCase.scapulaObj) {
+      const blobUrl = caseStore.blobUrlFromText(activeCase.scapulaObj, 'model/obj');
+      scapulaMesh = await loadScapula(blobUrl);
+      URL.revokeObjectURL(blobUrl);
+      scapulaSource = 'imported zip';
+      console.log('[PSI Init] Using scapula from imported zip');
+    } else {
+      try {
+        const headRes = await fetch('data/scapula_manifold.obj' + cacheBust, { method: 'HEAD' });
+        if (headRes.ok) {
+          scapulaMesh = await loadScapula('data/scapula_manifold.obj' + cacheBust);
+          usedManifoldVariant = true;
+          scapulaSource = 'scapula_manifold.obj ✓';
+          console.log('[PSI Init] Using data/scapula_manifold.obj (cleaned variant)');
+        } else throw new Error('not found');
+      } catch {
+        scapulaMesh = await loadScapula('data/scapula.obj' + cacheBust);
+        scapulaSource = 'scapula.obj (raw)';
+        console.log('[PSI Init] Using data/scapula.obj (raw marching-cubes variant)');
+      }
+    }
+    scene.add(scapulaMesh);
+    // Surface a flag in the HUD on init so user knows which variant is loaded
+    setTimeout(() => {
+      const hud = document.getElementById('hud');
+      if (hud) {
+        const color = usedManifoldVariant ? '#5fd96e' : '#ffb84d';
+        hud.innerHTML = `Drag the colored spheres · <span style="color:${color}">${scapulaSource}</span>`;
+      }
+    }, 100);
+
+    // 3. Extract axes from P2G
+    const g = state.planning.planning.patientRefToGlenoidRef;
+    glenoidRight.set(g[0], g[4], g[8]).normalize();
+    glenoidUp.set(g[1], g[5], g[9]).normalize();
+    friedmanAxis.set(g[2], g[6], g[10]).normalize();
+
+    const sn = payload.planes.glenoid_plane.normal_xyz;
+    glenoidNormal.set(sn[0], sn[1], sn[2]).normalize();
+    if (glenoidNormal.dot(friedmanAxis) < 0) glenoidNormal.negate();
+
+    // 3b. Apply implant plan adjustments to K-axis.
+    // The user planned the implant in test-heroui.html with retroversion/inclination
+    // adjustments saved in localStorage `schulterplan_implant_${caseId}`. The K-wire
+    // (= implant peg axis) must reflect those adjustments — that IS the trajectory
+    // the surgeon wants to drill. Without this, PSI would guide the K-wire along the
+    // baseline Friedman axis (0° retroversion, 0° inclination), which is wrong if
+    // the implant plan diverged from the baseline.
+    //
+    // Math: in glenoid local frame, adjustM = Rx(inclination) * Ry(retroversion) (Euler XYZ).
+    // The implant peg baseline is +Z (Friedman). After adjust: peg_glenoid = adjustM * (0,0,1).
+    // In world frame this becomes: P2G_rotation * peg_glenoid.
+    // Equivalently: rotate friedmanAxis (world) by inclination around glenoidRight, then
+    // by retroversion around glenoidUp (which preserves Euler XYZ order in the local frame).
+    let implantAdjust = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+    try {
+      const rawImpl = localStorage.getItem(`schulterplan_implant_${state.caseId}`);
+      if (rawImpl) {
+        const parsed = JSON.parse(rawImpl);
+        if (parsed && parsed.adjust) {
+          implantAdjust = { ...implantAdjust, ...parsed.adjust };
+          console.log('[PSI Init] Found implant plan adjustments:', implantAdjust);
+        }
+      }
+    } catch (e) { console.warn('[PSI Init] Could not read implant state:', e); }
+
+    state.implantAdjust = implantAdjust;
+    const rotMag = Math.abs(implantAdjust.retroversion) + Math.abs(implantAdjust.inclination);
+    const transMag = Math.abs(implantAdjust.tx) + Math.abs(implantAdjust.ty) + Math.abs(implantAdjust.depth);
+    state.kAxisAdjusted = (rotMag > 0.05 || transMag > 0.05);
+
+    // (a) Rotational part — rotate friedmanAxis if user changed retroversion/inclination
+    if (rotMag > 0.05) {
+      const baseline = friedmanAxis.clone();
+      const qInc = new THREE.Quaternion()
+        .setFromAxisAngle(glenoidRight, THREE.MathUtils.degToRad(implantAdjust.inclination));
+      const qRetro = new THREE.Quaternion()
+        .setFromAxisAngle(glenoidUp, THREE.MathUtils.degToRad(implantAdjust.retroversion));
+      const adjusted = baseline.clone().applyQuaternion(qInc).applyQuaternion(qRetro).normalize();
+      console.log('[PSI Init] K-axis DIRECTION adjusted:',
+        `retro=${implantAdjust.retroversion.toFixed(1)}°`,
+        `incl=${implantAdjust.inclination.toFixed(1)}°`,
+        '\n  baseline =', baseline.toArray().map(v => v.toFixed(3)),
+        '\n  adjusted =', adjusted.toArray().map(v => v.toFixed(3)));
+      friedmanAxis.copy(adjusted);
+    }
+
+    // (b) Translational part — offset kwireOrigin by tx*right + ty*up + depth*friedman.
+    //     glenoidCenter stays at (0,0,0) because it's the anatomical reference;
+    //     kwireOrigin moves so the PSI K-wire trajectory matches where the surgeon
+    //     parked the implant in the planner (tx/ty slide it across the glenoid face,
+    //     depth pushes along the peg axis).
+    if (transMag > 0.05) {
+      kwireOrigin.set(0, 0, 0)
+        .addScaledVector(glenoidRight,  implantAdjust.tx || 0)
+        .addScaledVector(glenoidUp,     implantAdjust.ty || 0)
+        .addScaledVector(friedmanAxis,  implantAdjust.depth || 0);
+      console.log('[PSI Init] K-wire ORIGIN offset:',
+        `tx=${implantAdjust.tx.toFixed(2)}mm`,
+        `ty=${implantAdjust.ty.toFixed(2)}mm`,
+        `depth=${implantAdjust.depth.toFixed(2)}mm`,
+        '\n  new origin (world) =', kwireOrigin.toArray().map(v => v.toFixed(3)));
+    } else {
+      kwireOrigin.set(0, 0, 0);
+    }
+
+    if (!state.kAxisAdjusted) {
+      console.log('[PSI Init] No implant adjustment — using baseline K-axis through glenoid center');
+    }
+
+    // 4. Re-center scapula so glenoid center = world origin
+    const rawCenter = new THREE.Vector3(g[3], g[7], g[11]);
+    scapulaMesh.position.set(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+    scapulaMesh.updateMatrixWorld(true);
+    glenoidCenter.set(0, 0, 0);
+
+    console.log('[PSI Init] Scapula re-centered, glenoid at origin');
+    console.log('[PSI Init] friedmanAxis (K_axis):', friedmanAxis.toArray());
+    console.log('[PSI Init] glenoidNormal:', glenoidNormal.toArray());
+
+    // 5. Compute viewDistance from scapula bbox
+    const bbox = new THREE.Box3().setFromObject(scapulaMesh);
+    const size = bbox.getSize(new THREE.Vector3());
+    viewDistance = Math.max(size.x, size.y, size.z) * 0.6;
+
+    // 5b. Compute K-wire bone entry point (raycast K_axis onto scapula surface)
+    kwireBoneEntry = computeKwireBoneEntry();
+
+    // Show K-wire info
+    document.getElementById('kwire-origin').textContent =
+      kwireOrigin.toArray().map(v => v.toFixed(2)).join(', ');
+    document.getElementById('kwire-direction').textContent =
+      friedmanAxis.toArray().map(v => v.toFixed(3)).join(', ');
+    if (kwireBoneEntry) {
+      const k = document.createElement('div'); k.className = 'k'; k.textContent = 'bone entry';
+      const v = document.createElement('div'); v.className = 'v';
+      v.textContent = kwireBoneEntry.toArray().map(v => v.toFixed(2)).join(', ');
+      document.getElementById('kwire-info').appendChild(k);
+      document.getElementById('kwire-info').appendChild(v);
+    }
+    // Surface implant-plan adjustments so user sees what's driving the K-axis
+    if (state.kAxisAdjusted) {
+      const kInfo = document.getElementById('kwire-info');
+      const sep = document.createElement('div');
+      sep.style.gridColumn = '1 / -1';
+      sep.style.borderTop = '1px solid var(--border)';
+      sep.style.marginTop = '6px';
+      sep.style.paddingTop = '6px';
+      sep.style.color = '#5fd96e';
+      sep.style.fontSize = '10px';
+      sep.style.fontWeight = '600';
+      sep.textContent = '↺ Adjusted from implant plan';
+      kInfo.appendChild(sep);
+      const addRow = (label, val) => {
+        const k = document.createElement('div'); k.className = 'k'; k.textContent = label;
+        const v = document.createElement('div'); v.className = 'v'; v.textContent = val;
+        kInfo.appendChild(k); kInfo.appendChild(v);
+      };
+      addRow('retroversion', `${implantAdjust.retroversion.toFixed(1)}°`);
+      addRow('inclination',  `${implantAdjust.inclination.toFixed(1)}°`);
+      addRow('tx (right)',   `${(implantAdjust.tx || 0).toFixed(2)} mm`);
+      addRow('ty (up)',      `${(implantAdjust.ty || 0).toFixed(2)} mm`);
+      addRow('depth',        `${(implantAdjust.depth || 0).toFixed(2)} mm`);
+    }
+
+    // 6. Init legs + patient ID: from saved state OR auto-place
+    const saved = loadState();
+    if (saved && saved.legs && saved.legs.every(l => l)) {
+      state.legs = saved.legs.map(l => new THREE.Vector3(...l));
+      console.log('[PSI Init] Loaded saved leg positions');
+    } else {
+      state.legs = autoPlaceLegs();
+      console.log('[PSI Init] Auto-placed legs');
+      saveState();
+    }
+    if (saved && typeof saved.patientId === 'string') {
+      state.patientId = saved.patientId.slice(0, 10);
+      const pin = document.getElementById('patient-id-input');
+      if (pin) pin.value = state.patientId;
+      if (state.patientId) console.log('[PSI Init] Restored patient ID:', state.patientId);
+    }
+
+    createLegSpheres();
+
+    // Pre-load font in background so first Generate-with-ID click is instant
+    loadPSIFont().catch(() => {});
+
+    // 7. Camera view
+    resize();
+    setView('glenoid');
+
+    animate();
+
+    // 8. Pre-load manifold-3d WASM in background so first Generate click is fast
+    initManifoldEngine().catch(err => console.warn('[PSI] manifold-3d preload failed:', err));
+  } catch (err) {
+    console.error('[PSI Init] Error:', err);
+    document.getElementById('case-label').textContent = 'ERROR: ' + err.message;
+  }
+})();
+
+</script>
+</body>
+</html>
