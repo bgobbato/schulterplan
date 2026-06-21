@@ -880,7 +880,7 @@
 
 <!-- Hidden file inputs -->
 <input type="file" id="folder-import" webkitdirectory directory multiple style="display:none" />
-<input type="file" id="zip-import" accept=".zip,application/zip" style="display:none" />
+<input type="file" id="zip-import" accept=".zip" style="display:none" />
 
 <!-- Drop overlay (shown when user drags a file over the window) -->
 <div id="drop-overlay">
@@ -3124,17 +3124,24 @@ document.getElementById('zip-import').addEventListener('change', async (e) => {
   if (file) await runZipImport(file);
 });
 
-// Global drag-and-drop: accept .zip anywhere on the window
+// Global drag-and-drop: accept .zip anywhere on the window.
+// Use `dataTransfer.types.includes('Files')` instead of `items[].kind` because
+// most browsers hide `items` during dragover for security reasons.
 (() => {
   const overlay = document.getElementById('drop-overlay');
   let dragDepth = 0;
   const hasFile = (e) => {
     if (!e.dataTransfer) return false;
-    const items = e.dataTransfer.items;
-    if (!items) return false;
-    for (const it of items) if (it.kind === 'file') return true;
+    const types = e.dataTransfer.types;
+    if (!types) return false;
+    // `types` is a DOMStringList in some browsers, plain array in others.
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true;
+    }
     return false;
   };
+  // dragover MUST preventDefault on every event (not only when overlay is up)
+  // otherwise the browser's default "open the file" behaviour fires on drop.
   window.addEventListener('dragenter', (e) => {
     if (!hasFile(e)) return;
     e.preventDefault();
@@ -3146,11 +3153,13 @@ document.getElementById('zip-import').addEventListener('change', async (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   });
-  window.addEventListener('dragleave', () => {
+  window.addEventListener('dragleave', (e) => {
+    if (!hasFile(e)) return;
     dragDepth = Math.max(0, dragDepth - 1);
     if (dragDepth === 0) overlay.classList.remove('active');
   });
   window.addEventListener('drop', async (e) => {
+    if (!hasFile(e)) return;
     e.preventDefault();
     dragDepth = 0;
     overlay.classList.remove('active');
