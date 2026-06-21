@@ -61,10 +61,12 @@ Arquivo: `test-psi.html` (~1940 linhas). Engine padrão: **manifold-3d** (WASM, 
 Team Bgobbato (BGO). 20 issues criadas (BGO-48 a BGO-67). Política dual-source:
 toda ideia/bug nova vai em (a) `PSI_NOTES.md` ou `PSI_TROUBLESHOOTING.md` E (b) issue Linear.
 
-## MPR — estado atual (31/maio/2026 — Phase 4C É O MVP)
-Branch `mpr-dev`. `test-heroui.html` original (sem MPR) **intacto**. O MPR vive
-em `test-heroui-ct.html` que agora é a **versão cross-section** (Phase 4C
-promovida ao padrão — antiga silhueta cheia disponível via `MPR.useCrossSection = false`).
+## MPR — estado atual (21/junho/2026 — CONSOLIDADO em test-heroui.html)
+A versão `test-heroui-ct.html` foi **promovida ao padrão** e o arquivo deletado.
+Agora `test-heroui.html` é a única página principal e inclui tudo: MPR + CT +
+cross-section + zip import. (Antiga `test-heroui.html` sem MPR não existe mais —
+links de outras páginas continuam apontando pra ela e ganham os recursos do CT
+automaticamente.)
 
 Funciona:
 - Botão `CT` na topbar abre coluna 400px com NiiVue 0.69 + NIfTI 64MB (gitignored em `data/`)

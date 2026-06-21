@@ -772,12 +772,124 @@
     .sidebar.left { order: 3; }
     .implant-grid { grid-template-columns: 1fr 1fr 1fr; }
   }
+
+  /* ── MPR / CT column (toggleable via topbar "CT" button) ─────────────── */
+  .ct-column {
+    display: none;
+    flex-direction: column;
+    background: #0a0a1a;
+    border-left: 1px solid var(--border);
+    min-width: 400px;
+    width: 400px;
+    overflow: hidden;
+  }
+  body.ct-on .ct-column { display: flex; }
+  /* When CT is on, the .app grid gets a 4th column inserted before the right sidebar */
+  body.ct-on .app { grid-template-columns: 280px 1fr 400px 290px; }
+
+  .ct-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; border-bottom: 1px solid var(--border); gap: 6px;
+    flex-shrink: 0;
+  }
+  .ct-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); font-weight: 600;
+  }
+  .ct-toolbar { display: flex; gap: 3px; }
+  .ct-tool {
+    width: 30px; height: 28px; border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04); border-radius: 5px;
+    color: var(--text-muted); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ct-tool:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .ct-tool.active {
+    background: rgba(99,102,241,0.2); color: #c7d2fe;
+    border-color: rgba(99,102,241,0.55);
+  }
+  .ct-tool svg { width: 14px; height: 14px; pointer-events: none; }
+
+  #ct-canvas-wrap {
+    flex: 1; position: relative; min-height: 0;
+  }
+  #ct-canvas { display: block; width: 100%; height: 100%; }
+  /* Implant contour overlay — transparent canvas above NiiVue */
+  #ct-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;  /* clicks/scroll go to NiiVue canvas underneath */
+    z-index: 2;
+  }
+  #ct-loading {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; color: var(--text-muted); font-size: 12px;
+    background: rgba(10,10,26,0.85); z-index: 5;
+  }
+  #ct-loading.hidden { display: none; }
+
+  .ct-info {
+    display: flex; justify-content: space-between; padding: 4px 10px;
+    font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  /* CT topbar button — uses .active state when CT column is shown */
+  #btn-ct.active {
+    box-shadow: 0 0 0 1.5px rgba(99,102,241,0.55) inset;
+  }
+
+  /* ── Drop overlay (drag-and-drop zip import) ────────────────────────── */
+  #drop-overlay {
+    position: fixed; inset: 0;
+    background: rgba(8, 10, 18, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9000;
+    display: none;
+    align-items: center; justify-content: center;
+    pointer-events: none; /* enabled by JS while dragging */
+  }
+  #drop-overlay.active { display: flex; }
+  .drop-card {
+    border: 2px dashed rgba(99,102,241,0.65);
+    background: rgba(20, 22, 36, 0.92);
+    border-radius: 18px;
+    padding: 40px 56px;
+    text-align: center;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+    max-width: 460px;
+  }
+  .drop-icon {
+    font-size: 56px; line-height: 1; margin-bottom: 12px;
+    color: rgba(165, 180, 252, 0.95);
+  }
+  .drop-title {
+    font-size: 18px; font-weight: 600; color: #e2e8f0;
+    margin-bottom: 6px;
+  }
+  .drop-sub {
+    font-size: 13px; color: #94a3b8;
+  }
+  /* Toast styling for import progress / errors (uses existing showToast) */
 </style>
 </head>
 <body>
 
-<!-- Hidden file input for folder import -->
+<!-- Hidden file inputs -->
 <input type="file" id="folder-import" webkitdirectory directory multiple style="display:none" />
+<input type="file" id="zip-import" accept=".zip" style="display:none" />
+
+<!-- Drop overlay (shown when user drags a file over the window) -->
+<div id="drop-overlay">
+  <div class="drop-card">
+    <div class="drop-icon">⬇</div>
+    <div class="drop-title">Drop the planning_package.zip</div>
+    <div class="drop-sub">Pipeline output: payload + meshes + CT NIfTI</div>
+  </div>
+</div>
 
 <div class="app">
   <!-- ── TOPBAR ── -->
@@ -835,7 +947,9 @@
       <button class="cut-btn" data-cut="sagittal">Sag</button>
     </div>
     <button class="btn btn-ghost btn-sm" id="btn-auto-measure">Measure</button>
-    <button class="btn btn-primary btn-sm" id="btn-import-folder">Import</button>
+    <button class="btn btn-ghost btn-sm" id="btn-ct" title="Toggle CT MPR column">CT</button>
+    <button class="btn btn-ghost btn-sm" id="btn-import-folder" title="Import legacy GPS folder">Folder</button>
+    <button class="btn btn-primary btn-sm" id="btn-import-zip" title="Import pipeline planning_package.zip">Import ZIP</button>
   </div>
 
   <!-- ── LEFT SIDEBAR ── -->
@@ -1043,6 +1157,24 @@
     </div>
   </div>
 
+  <!-- ── CT / MPR COLUMN (toggled by topbar "CT" button) ────────────────── -->
+  <div class="ct-column" id="ct-column">
+    <div class="ct-header">
+      <span class="ct-title">CT MPR</span>
+      <!-- Toolbar removed: scroll is implicit (wheel), no W/L / pan / zoom. -->
+      <div class="ct-toolbar" id="ct-toolbar"></div>
+    </div>
+    <div id="ct-canvas-wrap">
+      <canvas id="ct-canvas"></canvas>
+      <canvas id="ct-overlay"></canvas>
+      <div id="ct-loading">Loading CT volume…</div>
+    </div>
+    <div class="ct-info">
+      <span id="ct-slice-label">—</span>
+      <span id="ct-wl-label">—</span>
+    </div>
+  </div>
+
   <!-- ── RIGHT SIDEBAR ── -->
   <div class="sidebar right">
     <div class="section-label">Implant Position</div>
@@ -1165,6 +1297,9 @@
   SchulterPlan — implantcast<br>
   Created by Dr. Bruno Gobbato
 </div>
+
+<!-- ── NiiVue (MPR / CT viewer) ── -->
+<script src="https://unpkg.com/@niivue/niivue@0.69.0/dist/niivue.umd.js"></script>
 
 <!-- ── Three.js + App Logic ── -->
 <script type="importmap">
@@ -2237,6 +2372,205 @@ async function applyImportedCase(imported) {
   showToast(`Case ${state.planning.caseId} imported`);
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+   PIPELINE ZIP IMPORT (planning_package.zip — output of the backend)
+
+   Browser-only: the zip is parsed in memory, the scapula OBJ + payload
+   are applied to the scene, and the CT NIfTI is fed to NiiVue via a Blob
+   URL. Nothing leaves the user's machine — perfect for privacy.
+
+   Expected zip structure (path matching is regex-flexible):
+     planning_payload.json
+     models/scapula_planning.obj
+     models/humerus_planning.obj   (optional, kept for cross-page later)
+     processing/selected_series_0000.nii.gz   (optional)
+
+   Issues covered: BGO-79 (UI + drop), BGO-80 (JSZip), BGO-82 (apply).
+────────────────────────────────────────────────────────────────────── */
+
+let _importingZip = false;
+
+async function importCasePackageZip(file) {
+  // Dynamic import — no global dependency, no build step
+  let JSZip;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+    JSZip = mod.default || mod;
+  } catch (e) {
+    throw new Error('Failed to load JSZip from CDN: ' + e.message);
+  }
+  const zip = await JSZip.loadAsync(file);
+
+  const findFile = (regex) => {
+    for (const path of Object.keys(zip.files)) {
+      const f = zip.files[path];
+      if (!f.dir && regex.test(path)) return f;
+    }
+    return null;
+  };
+
+  const payloadFile = findFile(/planning_payload\.json$/i);
+  const scapulaFile = findFile(/scapula.*\.obj$/i);
+  const humerusFile = findFile(/humerus.*\.obj$/i);
+  const niftiFile   = findFile(/\.nii\.gz$/i);
+
+  if (!payloadFile) throw new Error('Missing planning_payload.json in zip');
+  if (!scapulaFile) throw new Error('Missing scapula OBJ in zip');
+
+  const payload        = JSON.parse(await payloadFile.async('text'));
+  const scapulaObjText = await scapulaFile.async('text');
+  const humerusObjText = humerusFile ? await humerusFile.async('text') : null;
+  const niftiBuffer    = niftiFile   ? await niftiFile.async('arraybuffer') : null;
+
+  return { payload, scapulaObjText, humerusObjText, niftiBuffer, fileName: file.name };
+}
+
+async function applyPipelineCase(parsed) {
+  // Persist any pending state from the OUTGOING case before swapping
+  try { flushAllPendingSaves(); } catch (_) {}
+
+  // Clear current scene + caches
+  if (scapulaMesh)     { scene.remove(scapulaMesh);     scapulaMesh = null; }
+  if (scapulaBackMesh) { scene.remove(scapulaBackMesh); scapulaBackMesh = null; }
+  if (implantMesh)     { scene.remove(implantMesh);     implantMesh = null; }
+  glenoidRayMesh    = null;
+  backSurfaceCache  = null;
+
+  // Parse payload → state.planning
+  const planning = parsePipelinePayload(parsed.payload);
+  state.planning      = planning;
+  state.adjust        = { retroversion: 0, inclination: 0, depth: 0, tx: 0, ty: 0, rotz: 0 };
+  state.scenarios     = [];
+  state.selectedImplant = null;
+
+  // Load scapula from a blob URL so loadScapula() works unchanged
+  const scapulaBlob = new Blob([parsed.scapulaObjText], { type: 'text/plain' });
+  const scapulaUrl  = URL.createObjectURL(scapulaBlob);
+  try {
+    scapulaMesh = await loadScapula(scapulaUrl);
+  } finally {
+    URL.revokeObjectURL(scapulaUrl);
+  }
+  scene.add(scapulaMesh);
+
+  // Axes from P2G + payload normal (same logic as init)
+  const g = planning.planning.patientRefToGlenoidRef;
+  glenoidRight.set(g[0], g[4], g[8]).normalize();
+  glenoidUp.set(g[1], g[5], g[9]).normalize();
+  friedmanAxis.set(g[2], g[6], g[10]).normalize();
+  const sn = planning._pipelinePayload.planes.glenoid_plane.normal_xyz;
+  glenoidNormal.set(sn[0], sn[1], sn[2]).normalize();
+  if (glenoidNormal.dot(friedmanAxis) < 0) glenoidNormal.negate();
+
+  // Re-center: glenoid_center → world origin
+  const rawCenter = new THREE.Vector3(g[3], g[7], g[11]);
+  scapulaMesh.position.set(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+  scapulaMesh.updateMatrixWorld(true);
+  planning.planning.patientRefToGlenoidRef[3]  = 0;
+  planning.planning.patientRefToGlenoidRef[7]  = 0;
+  planning.planning.patientRefToGlenoidRef[11] = 0;
+  glenoidCenter.set(0, 0, 0);
+
+  // Back mesh (same offset)
+  let firstGeom = null;
+  scapulaMesh.traverse(c => { if (c.isMesh && !firstGeom) firstGeom = c.geometry; });
+  if (firstGeom) {
+    buildScapulaBackMesh(firstGeom);
+    if (scapulaBackMesh) {
+      scapulaBackMesh.position.copy(scapulaMesh.position);
+      scapulaBackMesh.updateMatrixWorld(true);
+    }
+  }
+
+  viewDistance = 80;
+  document.getElementById('viewer-placeholder').style.display = 'none';
+
+  // Restore implant state for the NEW caseId (in case user re-imports)
+  const saved = loadImplantState();
+  if (saved) {
+    if (saved.selectedImplant) state.selectedImplant = saved.selectedImplant;
+    if (saved.adjust)          state.adjust = { ...state.adjust, ...saved.adjust };
+    if (Array.isArray(saved.scenarios)) state.scenarios = saved.scenarios;
+  }
+  if (state.selectedImplant) await setImplant(state.selectedImplant);
+
+  // Restore scapula lasso edits if any for this caseId
+  try { restoreScapulaEdit(); } catch (_) {}
+
+  // CT NIfTI — hand off to NiiVue (replace if loaded, queue if not)
+  if (parsed.niftiBuffer) {
+    // Free any previous imported NIfTI URL
+    if (MPR.pendingVolumeUrl) URL.revokeObjectURL(MPR.pendingVolumeUrl);
+    const niftiBlob = new Blob([parsed.niftiBuffer], { type: 'application/gzip' });
+    MPR.pendingVolumeUrl  = URL.createObjectURL(niftiBlob);
+    // Always end with .nii.gz so NiiVue's getFileExt() picks the NIfTI loader.
+    // The zip's filename has no extension hint NiiVue can parse from a blob URL.
+    MPR.pendingVolumeName = (parsed.fileName || '').toLowerCase().endsWith('.nii.gz')
+      ? parsed.fileName
+      : 'imported.nii.gz';
+    if (MPR.nv) {
+      try {
+        await MPR.nv.loadVolumes([{
+          url: MPR.pendingVolumeUrl,
+          name: MPR.pendingVolumeName,
+          colormap: 'gray',
+        }]);
+        // Re-anchor crosshair to NEW glenoid center
+        const gc = planning._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+        if (gc) {
+          const niiPos = pipelineToNiiVueMM(gc);
+          MPR.nv.scene.crosshairPos = MPR.nv.mm2frac(niiPos);
+        }
+        // Rebuild overlay's sceneToNiiVue matrix for the new glenoid_center
+        if (MPR.overlay) {
+          const gc_pipe = planning._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+          if (gc_pipe) {
+            MPR.overlay.sceneToNiiVue = new THREE.Matrix4().set(
+              -1,  0, 0, -gc_pipe[0],
+               0, -1, 0, -gc_pipe[1],
+               0,  0, 1,  gc_pipe[2],
+               0,  0, 0,           1
+            );
+          }
+          // Recompute volume centre for the new volume
+          const volCenter = MPR.nv.frac2mm([0.5, 0.5, 0.5]);
+          MPR.overlay.volCenter = [volCenter[0], volCenter[1], volCenter[2]];
+          updateImplantOverlayMesh();
+          drawMPROverlay();
+        }
+        MPR.nv.drawScene();
+      } catch (e) {
+        console.warn('[Import] NiiVue volume reload failed:', e);
+      }
+    }
+  }
+
+  setViewFn('glenoid');
+  refreshUI();
+  scheduleContactUpdate();
+
+  showToast(`Imported: ${planning.patientId || planning.caseId}`, 4000);
+}
+
+async function runZipImport(file) {
+  if (_importingZip) {
+    showToast('Import already running, please wait', 3000);
+    return;
+  }
+  _importingZip = true;
+  showToast('Reading zip…');
+  try {
+    const parsed = await importCasePackageZip(file);
+    showToast('Applying case…');
+    await applyPipelineCase(parsed);
+  } catch (err) {
+    console.error('[ImportZip]', err);
+    showToast('Import failed: ' + (err.message || err), 6000);
+  } finally {
+    _importingZip = false;
+  }
+}
+
 // ── Bone Contact Analysis (Raycasting) ──
 
 // Cached sub-mesh of glenoid region for fast raycasting
@@ -2779,6 +3113,65 @@ document.getElementById('folder-import').addEventListener('change', async (e) =>
   }
   e.target.value = ''; // reset for re-import
 });
+
+// ── Pipeline zip import (BGO-79) ──
+document.getElementById('btn-import-zip').addEventListener('click', () => {
+  document.getElementById('zip-import').click();
+});
+document.getElementById('zip-import').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = ''; // reset for re-import
+  if (file) await runZipImport(file);
+});
+
+// Global drag-and-drop: accept .zip anywhere on the window.
+// Use `dataTransfer.types.includes('Files')` instead of `items[].kind` because
+// most browsers hide `items` during dragover for security reasons.
+(() => {
+  const overlay = document.getElementById('drop-overlay');
+  let dragDepth = 0;
+  const hasFile = (e) => {
+    if (!e.dataTransfer) return false;
+    const types = e.dataTransfer.types;
+    if (!types) return false;
+    // `types` is a DOMStringList in some browsers, plain array in others.
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true;
+    }
+    return false;
+  };
+  // dragover MUST preventDefault on every event (not only when overlay is up)
+  // otherwise the browser's default "open the file" behaviour fires on drop.
+  window.addEventListener('dragenter', (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    overlay.classList.add('active');
+  });
+  window.addEventListener('dragover', (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  window.addEventListener('dragleave', (e) => {
+    if (!hasFile(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) overlay.classList.remove('active');
+  });
+  window.addEventListener('drop', async (e) => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    overlay.classList.remove('active');
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    if (!/\.zip$/i.test(file.name)) {
+      showToast('Drop a .zip file (planning_package format)', 3500);
+      return;
+    }
+    await runZipImport(file);
+  });
+})();
 
 // Adjust controls
 document.querySelectorAll('.ctrl-btn[data-axis]').forEach(btn => {
@@ -3656,6 +4049,630 @@ setTimeout(() => loadCommentsFromStorage(), 1500);
 
 // Expose for inline onclick handlers
 window.GPS = { setView: setViewFn, setImplant, refreshUI, state, deleteComment };
+
+/* ─────────────────────────────────────────────────────────────────────
+   MPR / CT VIEWER (NiiVue) — Phase 1+2
+   Lazy-initialized when the user first clicks the "CT" topbar button.
+   Original test-heroui.html does NOT load NiiVue — this code only runs
+   in test-heroui-ct.html.
+   ───────────────────────────────────────────────────────────────────── */
+
+const MPR = {
+  nv: null,                  // NiiVue instance
+  initStarted: false,        // prevents double init while loading
+  ctOn: false,               // current visibility state
+};
+window.MPR = MPR;             // for debugging from console
+
+/* Pipeline xyz_mm ↔ NiiVue mm conversion.
+   The pipeline is in LPS (DICOM convention: +X = patient's left, +Y = posterior).
+   NiiVue reads NIfTI as RAS (+X = right, +Y = anterior). So X and Y are flipped,
+   Z (superior) matches. Validated empirically by plotting the 6 scapula landmarks
+   and checking they hit anatomical positions in all 3 slice planes. */
+function pipelineToNiiVueMM(xyz) {
+  return [-xyz[0], -xyz[1], xyz[2]];
+}
+function niiVueToPipelineMM(xyz) {
+  return [-xyz[0], -xyz[1], xyz[2]];
+}
+
+// Clamp a fractional crosshair position to the volume bounds [0, 1] per axis
+// so scrolling past the end never produces NaN / empty renders.
+function clampCrosshairFrac() {
+  const p = MPR.nv?.scene?.crosshairPos;
+  if (!p) return;
+  for (let i = 0; i < 3; i++) {
+    if (p[i] < 0) p[i] = 0;
+    else if (p[i] > 1) p[i] = 1;
+  }
+}
+
+async function initMPR() {
+  if (MPR.initStarted) return;
+  MPR.initStarted = true;
+  const loadingEl = document.getElementById('ct-loading');
+  loadingEl.classList.remove('hidden');
+  loadingEl.textContent = 'Loading CT volume…';
+
+  try {
+    if (!window.niivue) {
+      throw new Error('NiiVue script not loaded');
+    }
+    const nv = new niivue.Niivue({
+      sliceType: niivue.SLICE_TYPE.MULTIPLANAR,
+      backColor: [0.05, 0.05, 0.10, 1],
+
+      // Green semi-transparent crosshair (helpful for orientation)
+      crosshairColor: [0.2, 0.85, 0.2, 0.55],
+      crosshairWidth: 1,
+      show3Dcrosshair: false,
+
+      // COLUMN layout: 3 slices stacked vertically (axial top, coronal middle,
+      // sagittal bottom), each spanning full width. Better for our narrow CT column.
+      multiplanarLayout: niivue.MULTIPLANAR_TYPE.COLUMN,
+      multiplanarShowRender: niivue.SHOW_RENDER.NEVER,
+
+      // We handle interaction explicitly via the toolbar
+      dragMode: niivue.DRAG_MODE.none,
+    });
+    await nv.attachToCanvas(document.getElementById('ct-canvas'));
+    // Prefer a NIfTI imported via zip in the current session, else the demo case.
+    // NiiVue infers the file format from the URL extension; blob: URLs have none,
+    // so we pass `name` with a known extension when serving an imported file.
+    let volumeOpts;
+    if (MPR.pendingVolumeUrl) {
+      volumeOpts = {
+        url: MPR.pendingVolumeUrl,
+        name: MPR.pendingVolumeName || 'imported.nii.gz',
+        colormap: 'gray',
+      };
+    } else {
+      volumeOpts = {
+        url: 'data/selected_series_0000.nii.gz?v=' + Date.now(),
+        colormap: 'gray',
+      };
+    }
+    console.log('[MPR] loadVolumes opts:', volumeOpts);
+    await nv.loadVolumes([volumeOpts]);
+    MPR.nv = nv;
+    console.log('[MPR] Volume loaded:', nv.volumes[0].dims,
+                'cal_min:', nv.volumes[0].cal_min,
+                'cal_max:', nv.volumes[0].cal_max);
+
+    // Jump crosshair to glenoid center if we have a pipeline case loaded.
+    // IMPORTANT: pipeline xyz_mm is in our mesh coordinate frame (matches the
+    // scapula OBJ vertices). NiiVue reads the NIfTI as RAS — empirically the
+    // X axis is FLIPPED between the two frames. So convert pipeline → NiiVue.
+    try {
+      const payload = state.planning?._pipelinePayload;
+      const gc = payload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+      if (gc) {
+        const niiPos = pipelineToNiiVueMM(gc);
+        nv.scene.crosshairPos = nv.mm2frac(niiPos);
+        nv.drawScene();
+        console.log('[MPR] Crosshair centred on glenoid (pipeline mm:', gc, '→ niivue mm:', niiPos, ')');
+      }
+    } catch (e) { console.warn('[MPR] could not centre crosshair:', e); }
+
+    setupMPRToolbar();
+    updateMPRInfo();
+    initMPROverlay();
+    updateImplantOverlayMesh();
+    drawMPROverlay();
+
+    // Hook NiiVue's drawScene so our overlay refreshes on ANY change
+    // (zoom, pan, brightness/contrast, slice scroll — all funnel through drawScene).
+    const _origDrawScene = nv.drawScene.bind(nv);
+    nv.drawScene = function (...args) {
+      const r = _origDrawScene(...args);
+      // schedule overlay redraw after NiiVue finishes (next microtask)
+      Promise.resolve().then(() => drawMPROverlay());
+      return r;
+    };
+
+    loadingEl.classList.add('hidden');
+  } catch (err) {
+    console.error('[MPR] init failed:', err);
+    loadingEl.textContent = 'Failed to load CT (' + (err.message || err) + ')';
+  }
+}
+
+// MPR is view-only: no W/L, no zoom, no pan. Wheel scrolls slices, that's it.
+// Kept as a no-op so any future call site doesn't break.
+MPR.activeTool = 'scroll';
+function setupMPRToolbar() { /* intentionally empty — no interactive tools */ }
+
+// Phase 4C — Render the true cross-section (plane × mesh) instead of the full
+// projected silhouette (EdgesGeometry). Set to false in DevTools to compare
+// against the old full-silhouette behaviour.
+MPR.useCrossSection = true;
+
+function updateMPRInfo() {
+  const nv = MPR.nv;
+  if (!nv || !nv.volumes[0]) return;
+  try {
+    const pos = nv.frac2mm(nv.scene.crosshairPos);
+    // Display in pipeline coords (so the labels match what the surgeon sees
+    // in landmarks throughout the rest of the app).
+    const pipe = niiVueToPipelineMM([pos[0], pos[1], pos[2]]);
+    document.getElementById('ct-slice-label').textContent =
+      `X: ${pipe[0].toFixed(1)}  Y: ${pipe[1].toFixed(1)}  Z: ${pipe[2].toFixed(1)} mm`;
+    const vol = nv.volumes[0];
+    const win = (vol.cal_max - vol.cal_min).toFixed(0);
+    const lvl = ((vol.cal_max + vol.cal_min) / 2).toFixed(0);
+    document.getElementById('ct-wl-label').textContent = `W:${win}  L:${lvl}`;
+  } catch (e) { /* before first draw */ }
+}
+
+/* ── Implant contour overlay (Phase 4 — Option D simplified) ──
+   Separate Three.js renderer drawing into #ct-overlay (transparent canvas
+   above NiiVue). One scene with the implant + a test marker, three
+   orthographic cameras matching NiiVue's per-slice viewports.
+*/
+function initMPROverlay() {
+  if (MPR.overlay) return;
+  const overlayCanvas = document.getElementById('ct-overlay');
+  const nvCanvas = document.getElementById('ct-canvas');
+  overlayCanvas.width  = nvCanvas.width;
+  overlayCanvas.height = nvCanvas.height;
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas: overlayCanvas, antialias: true, alpha: true,
+  });
+  renderer.setClearColor(0x000000, 0);
+  renderer.autoClear = false;        // we clear per viewport ourselves
+  renderer.setScissorTest(true);
+
+  const scene = new THREE.Scene();
+  // No lights — using MeshBasicMaterial (unlit) for crisp outlines
+
+  // Volume centre in NiiVue mm — used as the camera position for each slice's
+  // in-plane axes (NiiVue displays the FULL volume per slice; the view never
+  // pans with the crosshair, so neither should our overlay camera).
+  const volCenter = MPR.nv.frac2mm([0.5, 0.5, 0.5]);
+
+  MPR.overlay = {
+    renderer, scene,
+    cameras: {
+      axial:    new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
+      coronal:  new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
+      sagittal: new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000),
+    },
+    // Phase 4 fallback (full silhouette via EdgesGeometry)
+    implantLines: null,
+    // Phase 4C — true cross-section per slice (plane × mesh)
+    crossLines: null,             // { axial, coronal, sagittal } LineSegments
+    implantTrisLocal: null,       // Float32Array, 9 floats per triangle (mesh local)
+    implantNTris: 0,
+    crossOut: null,               // scratch Float32Array, 6 floats per segment
+    leafMesh: null,               // the actual Mesh inside implantMesh (for matrixWorld)
+    // Shared
+    sceneToNiiVue: null,
+    volCenter: [volCenter[0], volCenter[1], volCenter[2]],
+  };
+
+  // Pre-compute the scene → NiiVue transformation matrix.
+  // scene = re-centered (glenoid at origin); pipeline = LPS xyz_mm;
+  // NiiVue = RAS (X and Y flipped vs LPS, Z aligned). So:
+  //   pipeline = scene + glenoid_center_pipeline
+  //   niivue   = (-pipeline.x, -pipeline.y, pipeline.z)
+  const gc_pipe = state.planning?._pipelinePayload?.landmarks?.scapula?.glenoid_center?.xyz_mm;
+  if (gc_pipe) {
+    const m = new THREE.Matrix4().set(
+      -1,  0, 0, -gc_pipe[0],
+       0, -1, 0, -gc_pipe[1],
+       0,  0, 1,  gc_pipe[2],
+       0,  0, 0,           1
+    );
+    MPR.overlay.sceneToNiiVue = m;
+  }
+}
+
+/* ── Phase 4C helpers ──────────────────────────────────────────────────── */
+
+/* Extract every triangle of the implant's leaf mesh as raw vertex floats
+   (9 floats per triangle) in MESH LOCAL space. The result does NOT include
+   mesh.matrixWorld — that's applied later via LineSegments.matrix. This means
+   the cache stays valid across pose changes (retroversion / inclination /
+   depth) — only the matrix updates.
+   Handles both indexed and non-indexed BufferGeometry. */
+function extractImplantTrianglesLocal() {
+  let leafMesh = null;
+  implantMesh.traverse(c => { if (!leafMesh && c.isMesh && c.geometry) leafMesh = c; });
+  if (!leafMesh) return null;
+  const geom = leafMesh.geometry;
+  const posAttr = geom.attributes.position;
+  if (!posAttr) return null;
+  const pos = posAttr.array;
+  const idx = geom.index;
+  const N = idx ? (idx.count / 3) | 0 : (posAttr.count / 3) | 0;
+  const tris = new Float32Array(N * 9);
+  if (idx) {
+    const ia = idx.array;
+    for (let i = 0; i < N; i++) {
+      const a = ia[i*3] * 3, b = ia[i*3+1] * 3, c = ia[i*3+2] * 3;
+      const o = i * 9;
+      tris[o]   = pos[a];   tris[o+1] = pos[a+1]; tris[o+2] = pos[a+2];
+      tris[o+3] = pos[b];   tris[o+4] = pos[b+1]; tris[o+5] = pos[b+2];
+      tris[o+6] = pos[c];   tris[o+7] = pos[c+1]; tris[o+8] = pos[c+2];
+    }
+  } else {
+    // STL/OBJ without index: positions are already laid out as N*3 verts
+    tris.set(pos.subarray(0, N * 9));
+  }
+  return { leafMesh, tris, N };
+}
+
+/* Intersect a single triangle with a plane (point p, normal n), both in the
+   same coordinate space. Writes 0 or 6 floats (one line segment) to `out`
+   starting at `oIdx`. Returns number of floats written (0 or 6).
+   Edge cases handled:
+   - Triangle entirely on one side: skip
+   - Coplanar triangle: skip (drawn by adjacent triangles' edges)
+   - One vertex exactly on plane: emit (vertex, edge-cross-point) IF the other
+     two vertices straddle the plane; otherwise the plane just grazes a vertex
+     — skip. */
+const _CROSS_EPS = 1e-9;
+function intersectTriPlane(
+  v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z,
+  px, py, pz, nx, ny, nz,
+  out, oIdx
+) {
+  const d0 = (v0x - px) * nx + (v0y - py) * ny + (v0z - pz) * nz;
+  const d1 = (v1x - px) * nx + (v1y - py) * ny + (v1z - pz) * nz;
+  const d2 = (v2x - px) * nx + (v2y - py) * ny + (v2z - pz) * nz;
+  const s0 = Math.abs(d0) < _CROSS_EPS ? 0 : (d0 > 0 ? 1 : -1);
+  const s1 = Math.abs(d1) < _CROSS_EPS ? 0 : (d1 > 0 ? 1 : -1);
+  const s2 = Math.abs(d2) < _CROSS_EPS ? 0 : (d2 > 0 ? 1 : -1);
+
+  // Reject: all strictly same side, or coplanar
+  if (s0 !== 0 && s0 === s1 && s1 === s2) return 0;
+  if (s0 === 0 && s1 === 0 && s2 === 0) return 0;
+
+  const zeros = (s0 === 0 ? 1 : 0) + (s1 === 0 ? 1 : 0) + (s2 === 0 ? 1 : 0);
+
+  // Case: exactly TWO vertices on the plane → that triangle edge IS the
+  // intersection. Emit it directly.
+  if (zeros === 2) {
+    let ax, ay, az, bx, by, bz;
+    if (s0 === 0 && s1 === 0)      { ax = v0x; ay = v0y; az = v0z; bx = v1x; by = v1y; bz = v1z; }
+    else if (s1 === 0 && s2 === 0) { ax = v1x; ay = v1y; az = v1z; bx = v2x; by = v2y; bz = v2z; }
+    else                           { ax = v2x; ay = v2y; az = v2z; bx = v0x; by = v0y; bz = v0z; }
+    out[oIdx]   = ax; out[oIdx+1] = ay; out[oIdx+2] = az;
+    out[oIdx+3] = bx; out[oIdx+4] = by; out[oIdx+5] = bz;
+    return 6;
+  }
+
+  // Case: ONE vertex on plane. Plane cuts through it AND through the opposite
+  // edge IFF the other two vertices have opposite signs. Otherwise the plane
+  // is tangent at the vertex — skip.
+  if (zeros === 1) {
+    let onX, onY, onZ, ax, ay, az, bx, by, bz, dA, dB;
+    if (s0 === 0)      { onX = v0x; onY = v0y; onZ = v0z; ax = v1x; ay = v1y; az = v1z; bx = v2x; by = v2y; bz = v2z; dA = d1; dB = d2; if (s1 === s2) return 0; }
+    else if (s1 === 0) { onX = v1x; onY = v1y; onZ = v1z; ax = v0x; ay = v0y; az = v0z; bx = v2x; by = v2y; bz = v2z; dA = d0; dB = d2; if (s0 === s2) return 0; }
+    else               { onX = v2x; onY = v2y; onZ = v2z; ax = v0x; ay = v0y; az = v0z; bx = v1x; by = v1y; bz = v1z; dA = d0; dB = d1; if (s0 === s1) return 0; }
+    const t = dA / (dA - dB);
+    out[oIdx]   = onX; out[oIdx+1] = onY; out[oIdx+2] = onZ;
+    out[oIdx+3] = ax + t * (bx - ax);
+    out[oIdx+4] = ay + t * (by - ay);
+    out[oIdx+5] = az + t * (bz - az);
+    return 6;
+  }
+
+  // Case: ZERO vertices on plane, signs not all equal → exactly 2 edges cross.
+  let xa = 0, ya = 0, za = 0, xb = 0, yb = 0, zb = 0, count = 0;
+  if (s0 !== s1) {
+    const t = d0 / (d0 - d1);
+    xa = v0x + t * (v1x - v0x);
+    ya = v0y + t * (v1y - v0y);
+    za = v0z + t * (v1z - v0z);
+    count = 1;
+  }
+  if (s1 !== s2) {
+    const t = d1 / (d1 - d2);
+    if (count === 0) { xa = v1x + t * (v2x - v1x); ya = v1y + t * (v2y - v1y); za = v1z + t * (v2z - v1z); count = 1; }
+    else             { xb = v1x + t * (v2x - v1x); yb = v1y + t * (v2y - v1y); zb = v1z + t * (v2z - v1z); count = 2; }
+  }
+  if (count < 2 && s2 !== s0) {
+    const t = d2 / (d2 - d0);
+    if (count === 0) { xa = v2x + t * (v0x - v2x); ya = v2y + t * (v0y - v2y); za = v2z + t * (v0z - v2z); count = 1; }
+    else             { xb = v2x + t * (v0x - v2x); yb = v2y + t * (v0y - v2y); zb = v2z + t * (v0z - v2z); count = 2; }
+  }
+  if (count !== 2) return 0;
+  out[oIdx]   = xa; out[oIdx+1] = ya; out[oIdx+2] = za;
+  out[oIdx+3] = xb; out[oIdx+4] = yb; out[oIdx+5] = zb;
+  return 6;
+}
+
+/* Build / refresh the implant contour on the overlay scene. Called whenever
+   the implant model is loaded or replaced. Pose changes (retroversion etc.)
+   do NOT call this — they only need a redraw because the triangles are cached
+   in mesh-local space and the LineSegments.matrix updates each draw. */
+function updateImplantOverlayMesh() {
+  const ov = MPR.overlay;
+  if (!ov || !ov.sceneToNiiVue) return;
+
+  // Dispose any previous artefacts (both modes)
+  if (ov.implantLines) {
+    ov.scene.remove(ov.implantLines);
+    ov.implantLines.geometry.dispose();
+    ov.implantLines.material.dispose();
+    ov.implantLines = null;
+  }
+  if (ov.crossLines) {
+    for (const k of ['axial', 'coronal', 'sagittal']) {
+      const l = ov.crossLines[k];
+      if (!l) continue;
+      ov.scene.remove(l);
+      l.geometry.dispose();
+      l.material.dispose();
+    }
+    ov.crossLines = null;
+  }
+  ov.implantTrisLocal = null;
+  ov.implantNTris = 0;
+  ov.crossOut = null;
+  ov.leafMesh = null;
+
+  if (!implantMesh) return;
+
+  if (!MPR.useCrossSection) {
+    // ── Fallback path: original Phase 4 (full silhouette via EdgesGeometry) ──
+    let geom = null;
+    implantMesh.traverse(c => { if (!geom && c.isMesh && c.geometry) geom = c.geometry; });
+    if (!geom) return;
+    const edges = new THREE.EdgesGeometry(geom, 20);
+    const mat = new THREE.LineBasicMaterial({ color: 0xff7a00, transparent: true, opacity: 0.95 });
+    const lines = new THREE.LineSegments(edges, mat);
+    lines.matrixAutoUpdate = false;
+    implantMesh.updateMatrixWorld(true);
+    lines.matrix.multiplyMatrices(ov.sceneToNiiVue, implantMesh.matrixWorld);
+    lines.matrixWorldNeedsUpdate = true;
+    ov.scene.add(lines);
+    ov.implantLines = lines;
+    return;
+  }
+
+  // ── Phase 4C path: cache triangles + create the 3 cross-section LineSegments ──
+  const ext = extractImplantTrianglesLocal();
+  if (!ext) return;
+  ov.leafMesh = ext.leafMesh;
+  ov.implantTrisLocal = ext.tris;
+  ov.implantNTris = ext.N;
+  // Output buffer: at most one segment (2 verts = 6 floats) per triangle
+  ov.crossOut = new Float32Array(ext.N * 6);
+
+  // Three LineSegments, one per slice axis. Each gets its own preallocated
+  // BufferGeometry sized to the worst case (N triangles → 2N verts).
+  const colors = { axial: 0xff7a00, coronal: 0xff7a00, sagittal: 0xff7a00 };
+  ov.crossLines = {};
+  for (const axis of ['axial', 'coronal', 'sagittal']) {
+    const positions = new Float32Array(ext.N * 6); // owned by the geometry
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geom.setDrawRange(0, 0); // empty until first computeCrossSection() call
+    const mat = new THREE.LineBasicMaterial({
+      color: colors[axis], transparent: true, opacity: 0.95,
+    });
+    const lines = new THREE.LineSegments(geom, mat);
+    lines.matrixAutoUpdate = false;
+    lines.frustumCulled = false; // cross-section bounds change every draw
+    lines.userData.axis = axis;
+    ov.scene.add(lines);
+    ov.crossLines[axis] = lines;
+  }
+}
+
+/* Compute the implant's cross-section against a plane in NiiVue (world) space
+   and upload the resulting line segments into the given LineSegments. The
+   triangles are cached in mesh-local space; we transform the plane into
+   mesh-local space (inverse of LineSegments.matrix), do all intersections
+   there, then let the matrix transform the output back to NiiVue space. */
+const _v3 = new THREE.Vector3();
+const _v3b = new THREE.Vector3();
+const _mInv = new THREE.Matrix4();
+function computeCrossSectionInto(lines, M, p_world, n_world) {
+  const ov = MPR.overlay;
+  const tris = ov.implantTrisLocal;
+  const N = ov.implantNTris;
+  const out = ov.crossOut;
+  if (!tris || !N) { lines.geometry.setDrawRange(0, 0); return; }
+
+  // Plane → mesh-local
+  _mInv.copy(M).invert();
+  _v3.set(p_world[0], p_world[1], p_world[2]).applyMatrix4(_mInv);
+  _v3b.set(n_world[0], n_world[1], n_world[2]).transformDirection(_mInv);
+  const px = _v3.x,  py = _v3.y,  pz = _v3.z;
+  const nx = _v3b.x, ny = _v3b.y, nz = _v3b.z;
+
+  let outIdx = 0;
+  for (let i = 0; i < N; i++) {
+    const o = i * 9;
+    outIdx += intersectTriPlane(
+      tris[o],   tris[o+1], tris[o+2],
+      tris[o+3], tris[o+4], tris[o+5],
+      tris[o+6], tris[o+7], tris[o+8],
+      px, py, pz, nx, ny, nz,
+      out, outIdx
+    );
+  }
+
+  // Upload to GPU. We reuse the attribute's backing array.
+  const posAttr = lines.geometry.attributes.position;
+  const arr = posAttr.array;
+  // Copy the populated prefix of `out` into the attribute's array
+  arr.set(out.subarray(0, outIdx));
+  posAttr.needsUpdate = true;
+  lines.geometry.setDrawRange(0, outIdx / 3); // floats / 3 = vertex count
+}
+
+function drawMPROverlay() {
+  const nv = MPR.nv;
+  const ov = MPR.overlay;
+  if (!nv || !ov || !nv.screenSlices?.length) return;
+
+  // Re-sync canvas size with NiiVue (in case NiiVue resized internally)
+  const nvCanvas = nv.gl.canvas;
+  const ovCanvas = ov.renderer.domElement;
+  if (ovCanvas.width !== nvCanvas.width || ovCanvas.height !== nvCanvas.height) {
+    ovCanvas.width  = nvCanvas.width;
+    ovCanvas.height = nvCanvas.height;
+    ov.renderer.setSize(nvCanvas.width, nvCanvas.height, false);
+  }
+
+  const ch_mm = nv.frac2mm(nv.scene.crosshairPos); // RAS / NiiVue mm
+  const cx = ch_mm[0], cy = ch_mm[1], cz = ch_mm[2];
+  const [vcx, vcy, vcz] = ov.volCenter; // volume centre — frame stays put
+  const canvasH = ovCanvas.height;
+
+  // ── Phase 4C: refresh cross-sections (plane × mesh) for each axis ──
+  // Triangles are cached in mesh-local space; LineSegments.matrix transforms
+  // them back to NiiVue space. So we update both the matrix (pose changed?)
+  // and the geometry (slice depth changed?).
+  let mesh2niivue = null; // shared M = sceneToNiiVue × leafMesh.matrixWorld
+  if (MPR.useCrossSection && ov.crossLines && ov.leafMesh && implantMesh) {
+    implantMesh.updateMatrixWorld(true);
+    mesh2niivue = new THREE.Matrix4().multiplyMatrices(ov.sceneToNiiVue, ov.leafMesh.matrixWorld);
+
+    for (const axis of ['axial', 'coronal', 'sagittal']) {
+      const line = ov.crossLines[axis];
+      line.matrix.copy(mesh2niivue);
+      line.matrixWorldNeedsUpdate = true;
+      // Plane (point on plane, plane normal) in NiiVue / world space
+      let p, n;
+      if (axis === 'axial')        { p = [0, 0, cz]; n = [0, 0, 1]; }
+      else if (axis === 'coronal') { p = [0, cy, 0]; n = [0, 1, 0]; }
+      else                          { p = [cx, 0, 0]; n = [1, 0, 0]; }
+      computeCrossSectionInto(line, mesh2niivue, p, n);
+    }
+  } else if (!MPR.useCrossSection && ov.implantLines && implantMesh) {
+    // Fallback: keep the EdgesGeometry transform in sync with the implant pose
+    implantMesh.updateMatrixWorld(true);
+    ov.implantLines.matrix.multiplyMatrices(ov.sceneToNiiVue, implantMesh.matrixWorld);
+    ov.implantLines.matrixWorldNeedsUpdate = true;
+  }
+
+  // Clear entire overlay first
+  ov.renderer.setViewport(0, 0, ovCanvas.width, canvasH);
+  ov.renderer.setScissor(0, 0, ovCanvas.width, canvasH);
+  ov.renderer.clear(true, true, true);
+
+  for (const s of nv.screenSlices) {
+    const [px, py, pw, ph] = s.leftTopWidthHeight;
+    const [fovX, fovY] = s.fovMM;
+    // NiiVue uses top-left origin; WebGL viewport uses bottom-left
+    const vp_y = canvasH - py - ph;
+
+    let cam, activeAxis;
+    if (s.axCorSag === 0) {
+      // AXIAL: looking down +Z onto X-Y plane.
+      // Camera is at the VOLUME centre in X-Y; the slice depth (Z) follows the crosshair.
+      cam = ov.cameras.axial;
+      cam.position.set(vcx, vcy, cz + 500);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(vcx, vcy, cz);
+      activeAxis = 'axial';
+    } else if (s.axCorSag === 1) {
+      // CORONAL: looking along +Y onto X-Z plane
+      cam = ov.cameras.coronal;
+      cam.position.set(vcx, cy - 500, vcz);
+      cam.up.set(0, 0, 1);
+      cam.lookAt(vcx, cy, vcz);
+      activeAxis = 'coronal';
+    } else {
+      // SAGITTAL: looking along +X onto Y-Z plane
+      cam = ov.cameras.sagittal;
+      cam.position.set(cx + 500, vcy, vcz);
+      cam.up.set(0, 0, 1);
+      cam.lookAt(cx, vcy, vcz);
+      activeAxis = 'sagittal';
+    }
+    cam.left   = -fovX / 2;
+    cam.right  =  fovX / 2;
+    cam.top    =  fovY / 2;
+    cam.bottom = -fovY / 2;
+    cam.updateProjectionMatrix();
+
+    // Phase 4C: render ONLY the matching axis's cross-section in this viewport.
+    // The other two axes' lines exist in the same scene but are hidden so
+    // their projections (edge-on curves) don't clutter the view.
+    if (MPR.useCrossSection && ov.crossLines) {
+      ov.crossLines.axial.visible    = (activeAxis === 'axial');
+      ov.crossLines.coronal.visible  = (activeAxis === 'coronal');
+      ov.crossLines.sagittal.visible = (activeAxis === 'sagittal');
+    }
+
+    ov.renderer.setViewport(px, vp_y, pw, ph);
+    ov.renderer.setScissor(px, vp_y, pw, ph);
+    ov.renderer.render(ov.scene, cam);
+  }
+
+  // Leave them all visible after the last viewport so user inspection in the
+  // Three.js scene panel (if any) shows everything; per-viewport toggle still
+  // applied on the next draw.
+  if (MPR.useCrossSection && ov.crossLines) {
+    ov.crossLines.axial.visible = true;
+    ov.crossLines.coronal.visible = true;
+    ov.crossLines.sagittal.visible = true;
+  }
+}
+
+// Scroll wheel → change slice in the row under the cursor
+// COLUMN layout: row 0 = axial (±Z), row 1 = coronal (±Y), row 2 = sagittal (±X)
+document.getElementById('ct-canvas').addEventListener('wheel', (e) => {
+  if (!MPR.nv) return;
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 1 : -1;
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const y = (e.clientY - rect.top) / rect.height;
+  // Row detection — each slice gets 1/3 of the canvas height
+  let dx = 0, dy = 0, dz = 0;
+  if (y < 1/3)        dz = delta;   // top row = axial
+  else if (y < 2/3)   dy = delta;   // middle row = coronal
+  else                dx = delta;   // bottom row = sagittal
+  // NiiVue's moveCrosshairInVox takes 3 separate scalar args, not an array
+  MPR.nv.moveCrosshairInVox(dx, dy, dz);
+  clampCrosshairFrac();
+  MPR.nv.drawScene();
+  updateMPRInfo();
+  drawMPROverlay();
+}, { passive: false });
+
+// Monkey-patch updateImplantPose: refresh the MPR contour whenever the
+// implant pose changes (retroversion / inclination / depth / translation).
+// Function declarations are reassignable bindings in modules, and the existing
+// click handlers do a NAME lookup each call so our wrapper is hit.
+const _origUpdateImplantPose = updateImplantPose;
+// eslint-disable-next-line no-func-assign
+updateImplantPose = function () {
+  _origUpdateImplantPose.apply(this, arguments);
+  if (MPR.overlay) {
+    updateImplantOverlayMesh();
+    if (MPR.ctOn) drawMPROverlay();
+  }
+};
+
+// Also refresh contour after a new implant model loads
+const _origSetImplant = setImplant;
+// eslint-disable-next-line no-func-assign
+setImplant = async function () {
+  await _origSetImplant.apply(this, arguments);
+  if (MPR.overlay) {
+    updateImplantOverlayMesh();
+    if (MPR.ctOn) drawMPROverlay();
+  }
+};
+
+// Toggle CT column open/closed via topbar "CT" button
+document.getElementById('btn-ct').addEventListener('click', () => {
+  MPR.ctOn = !MPR.ctOn;
+  document.body.classList.toggle('ct-on', MPR.ctOn);
+  document.getElementById('btn-ct').classList.toggle('active', MPR.ctOn);
+  // The 3D viewer canvas needs to re-fit (it has less width now / more width)
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+  if (MPR.ctOn) initMPR();
+});
 </script>
 
 </body>
